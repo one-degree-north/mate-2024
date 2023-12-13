@@ -8,7 +8,7 @@ import time
 import json
 
 
-def main(stop_event, use_stop_event=False, server_debug=False, data_debug=False, thrust_controller_debug=False, mcu_debug=False):
+def main(stop_event=None, use_stop_event=False, server_debug=False, data_debug=False, thrust_controller_debug=False, mcu_debug=False):
     # setup configuration file contents
     config_file = open('config.json', 'r')
     config = json.loads(config_file.read())
