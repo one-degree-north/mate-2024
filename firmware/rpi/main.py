@@ -27,11 +27,11 @@ def main(stop_event=None, use_stop_event=False, server_debug=False, data_debug=F
     server.set_interface(interface)
     interface.set_server(server)
 
-    data_input =None
+    data_input=None
     # config if we are using bno data
     if config['use_bno']:
-        opi_data = DataInput(report_data=True, stop_event=stop_event, use_stop_event=use_stop_event, debug=config["data_debug"])
-        thrust_controller.set_data(DataInput)
+        data_input = DataInput(report_data=True, stop_event=stop_event, use_stop_event=use_stop_event, debug=config["data_debug"])
+        thrust_controller.set_data(data_input)
         data_input.set_server(server)
 
     # start the system
@@ -45,7 +45,7 @@ def main(stop_event=None, use_stop_event=False, server_debug=False, data_debug=F
     print("starting thruster controller")
     thrust_controller.start_loop()
     
-    return thrust_controller, server, opi_data, interface
+    return thrust_controller, server, data_input, interface
 
 if __name__ == "__main__":
     # thrust_controller, server, data, interface = main(debug=True)
