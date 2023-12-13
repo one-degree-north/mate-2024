@@ -1,8 +1,12 @@
 {
     "ip_addr": "192.168.13.101",
     "udp_port": 7772,
-    "serial_port": "/dev/ttyS1",
+    "serial_port": "/dev/ttyACM0",
     "thruster_move_delta": 0.05,
-    "debug": 1,
-    "use_bno": 0
+    "data_debug": 1,
+    "server_debug":1,
+    "mcu_debug":1,
+    "thruster_controller_debug":1,
+    "use_bno": 0,
+    "send_data":0
 }

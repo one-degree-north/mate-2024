@@ -19,21 +19,9 @@ from Adafruit_BNO055 import BNO055
 bno = BNO055.BNO055()
 
 class DataInput:
-    def __init__(self):
+    def __init__(self, report_data=False, stop_event=None, use_stop_event=False, debug=False):
         self.bno = BNO055.BNO055()
-
-        self.accel = [0, 0, 0]
-        self.gyro = [0, 0, 0]
-        self.eul = [0, 0, 0]
-        self.vel = [0, 0, 0]
-        self.quat = [0, 0, 0, 0]
-        self.lin = [0, 0, 0]
-        self.inf = [0, 0, 0]    # not sure how this should be represented
-        self.cal = [0, 0, 0]    # also not sure
-        self.con = [0, 0, 0]
-        self.mag = [0, 0, 0]
-        self.gra = [0, 0, 0]
-
+        self.bno_read_delay = 0.01    # in seconds
 
         self.data = {
             "acceleration":[0,0,0],
@@ -46,6 +34,10 @@ class DataInput:
             "calibration":[0,0,0],
             "gravity":[0,0,0]
         }
+
+        self.debug=debug
+        if self.debug:
+            self.last_time = time.process_time_ns()
     
     def bno_loop(self):
         while True:
@@ -74,34 +66,41 @@ class DataInput:
             # in meters per second squared):
             self.data["gravity"] = bno.read_gravity()
             # Sleep for a second until the next reading.
-            # time.sleep(1)
+
+            if self.debug:
+                now = time.process_time_ns
+                print(f"delta time: {self.last_time-now}")
+                print(f"data: {self.data}")
+                self.last_time = now
+
+            time.sleep(self.bno_read_delay)
 
 
 
 
-# Enable verbose debug logging if -v is passed as a parameter.
-if len(sys.argv) == 2 and sys.argv[1].lower() == '-v':
-    logging.basicConfig(level=logging.DEBUG)
+# # Enable verbose debug logging if -v is passed as a parameter.
+# if len(sys.argv) == 2 and sys.argv[1].lower() == '-v':
+#     logging.basicConfig(level=logging.DEBUG)
 
-# Initialize the BNO055 and stop if something went wrong.
-if not bno.begin():
-    raise RuntimeError('Failed to initialize BNO055! Is the sensor connected?')
+# # Initialize the BNO055 and stop if something went wrong.
+# if not bno.begin():
+#     raise RuntimeError('Failed to initialize BNO055! Is the sensor connected?')
 
-# Print system status and self test result.
-status, self_test, error = bno.get_system_status()
-print('System status: {0}'.format(status))
-print('Self test result (0x0F is normal): 0x{0:02X}'.format(self_test))
-# Print out an error if system status is in error mode.
-if status == 0x01:
-    print('System error: {0}'.format(error))
-    print('See datasheet section 4.3.59 for the meaning.')
+# # Print system status and self test result.
+# status, self_test, error = bno.get_system_status()
+# print('System status: {0}'.format(status))
+# print('Self test result (0x0F is normal): 0x{0:02X}'.format(self_test))
+# # Print out an error if system status is in error mode.
+# if status == 0x01:
+#     print('System error: {0}'.format(error))
+#     print('See datasheet section 4.3.59 for the meaning.')
 
-# Print BNO055 software revision and other diagnostic data.
-sw, bl, accel, mag, gyro = bno.get_revision()
-print('Software version:   {0}'.format(sw))
-print('Bootloader version: {0}'.format(bl))
-print('Accelerometer ID:   0x{0:02X}'.format(accel))
-print('Magnetometer ID:    0x{0:02X}'.format(mag))
-print('Gyroscope ID:       0x{0:02X}\n'.format(gyro))
+# # Print BNO055 software revision and other diagnostic data.
+# sw, bl, accel, mag, gyro = bno.get_revision()
+# print('Software version:   {0}'.format(sw))
+# print('Bootloader version: {0}'.format(bl))
+# print('Accelerometer ID:   0x{0:02X}'.format(accel))
+# print('Magnetometer ID:    0x{0:02X}'.format(mag))
+# print('Gyroscope ID:       0x{0:02X}\n'.format(gyro))
 
-print('Reading BNO055 data, press Ctrl-C to quit...')
+# print('Reading BNO055 data, press Ctrl-C to quit...')
