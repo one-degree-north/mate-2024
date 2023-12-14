@@ -106,7 +106,7 @@ class OPiServer:
         self.out_queue.put(data)
     
     def send_confirmation(self):
-        self.out_queue.put(struct.pack("Q"))
+        self.out_queue.put(struct.pack("!c", bytes([0x10])))
 
     def send_thruster_positions(self):
         pass

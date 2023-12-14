@@ -138,53 +138,57 @@ class PIClient:
         param = pkt[1]
         data = pkt[2:]
         length = len(data)
-        match(cmd):
-            case 0x00:
-                # echo or hello
-                print(f"opi confirm: {data}")
-            case 0x1A:
-                # thruster positions
-                pass
-            case 0x2A:
-                # servo positions
-                pass
-            case 0x33:
-                # sensor data
-                #TODO: make this shorter (but whatever), add calibration, add BNO mode
-                match(param):
-                    case 0x00:  # accel
-                        if length == 12:
-                            acc = struct.unpack("!fff", data)
-                            self.bno_data["accel"] = acc
-                    case 0x01:  # euler
-                        if length == 12:
-                            eul = struct.unpack("!fff", data)
-                            self.bno_data["eul"] = eul
-                    case 0x02:  # mag
-                        if length == 12:
-                            mag = struct.unpack("!fff", data)
-                            self.bno_data["mag"] = mag
-                    case 0x03:  # quaternion
-                        if length == 16:
-                            quat = struct.unpack("!ffff", data)
-                            self.bno_data["quat"] = quat
-                    case 0x04:  # gra
-                        if length == 12:
-                            gra = struct.unpack("!fff", data)
-                            self.bno_data["gra"] = gra
-                    case 0x05:  # linear accel
-                        if length == 12:
-                            lin = struct.unpack("!fff", data)
-                            self.bno_data["lin"] = lin
-                    case 0x06:  # inf
-                        if length == 12:
-                            inf = struct.unpack("!fff", data)
-                            self.bno_data["inf"] = inf
-                    case 0x07:  # calibration
-                        # self.bno_data.set_value(BNODataOutputType.CAL)
-                        pass
-                    case 0x08:  # mode
-                        pass
+
+        if cmd == 0x10:
+            print(f"rpi confirm: {data}")
+
+        # match(cmd):
+        #     case 0x00:
+        #         # echo or hello
+        #         print(f"opi confirm: {data}")
+        #     case 0x1A:
+        #         # thruster positions
+        #         pass
+        #     case 0x2A:
+        #         # servo positions
+        #         pass
+        #     case 0x33:
+        #         # sensor data
+        #         #TODO: make this shorter (but whatever), add calibration, add BNO mode
+        #         match(param):
+        #             case 0x00:  # accel
+        #                 if length == 12:
+        #                     acc = struct.unpack("!fff", data)
+        #                     self.bno_data["accel"] = acc
+        #             case 0x01:  # euler
+        #                 if length == 12:
+        #                     eul = struct.unpack("!fff", data)
+        #                     self.bno_data["eul"] = eul
+        #             case 0x02:  # mag
+        #                 if length == 12:
+        #                     mag = struct.unpack("!fff", data)
+        #                     self.bno_data["mag"] = mag
+        #             case 0x03:  # quaternion
+        #                 if length == 16:
+        #                     quat = struct.unpack("!ffff", data)
+        #                     self.bno_data["quat"] = quat
+        #             case 0x04:  # gra
+        #                 if length == 12:
+        #                     gra = struct.unpack("!fff", data)
+        #                     self.bno_data["gra"] = gra
+        #             case 0x05:  # linear accel
+        #                 if length == 12:
+        #                     lin = struct.unpack("!fff", data)
+        #                     self.bno_data["lin"] = lin
+        #             case 0x06:  # inf
+        #                 if length == 12:
+        #                     inf = struct.unpack("!fff", data)
+        #                     self.bno_data["inf"] = inf
+        #             case 0x07:  # calibration
+        #                 # self.bno_data.set_value(BNODataOutputType.CAL)
+        #                 pass
+        #             case 0x08:  # mode
+        #                 pass
 
     def move_servo(self, pulse1, pulse2):
         self.out_queue.put(struct.pack("!cHH", bytes([0x20]), int(pulse1//2), int(pulse2//2)))
