@@ -234,28 +234,33 @@ if __name__ == "__main__":
     comms = PIClient((addr, 7772))
     while True:
         command = input()
-        match(command):
-            case "bruh":
-                comms.test_connection()
-            case 'tt':
-                comms.set_manual_thrust([1, 0, 0, 0, 0, 0])
-            case 'stop':
-                comms.set_manual_thrust([0, 0, 0, 0, 0, 0])
-            case 'tf':
-                comms.set_manual_thrust([0.2, 0, 0, 0, 0, 0])
-            case 'ts':
-                comms.set_manual_thrust([0, 0.2, 0, 0, 0, 0])
-            case 'tu':
-                comms.set_manual_thrust([0, 0, 0.2, 0, 0, 0])
-            case 'all':
-                val = float(input(">"))
-                comms.set_manual_thrust([val, val, val, val, val, val])
-            case 'sv':
-                comms.move_servo(int(input("1: ")), int(input("2: ")))
-            case 'on':
-                comms.turn_flashlight_on()
-            case 'off':
-                comms.turn_flashlight_off()
-            case "lel":
-                thrust = input(">")
-                comms.set_manual_thrust([float(thrust), 0, 0, 0, 0, 0])
+        if command == "bruh":
+            comms.test_connection()
+        if command == "all":
+            val = float(input(">"))
+            comms.set_manual_thrust([val, val, val, val, val, val])
+        # match(command):
+        #     case "bruh":
+        #         comms.test_connection()
+        #     case 'tt':
+        #         comms.set_manual_thrust([1, 0, 0, 0, 0, 0])
+        #     case 'stop':
+        #         comms.set_manual_thrust([0, 0, 0, 0, 0, 0])
+        #     case 'tf':
+        #         comms.set_manual_thrust([0.2, 0, 0, 0, 0, 0])
+        #     case 'ts':
+        #         comms.set_manual_thrust([0, 0.2, 0, 0, 0, 0])
+        #     case 'tu':
+        #         comms.set_manual_thrust([0, 0, 0.2, 0, 0, 0])
+        #     case 'all':
+        #         val = float(input(">"))
+        #         comms.set_manual_thrust([val, val, val, val, val, val])
+        #     case 'sv':
+        #         comms.move_servo(int(input("1: ")), int(input("2: ")))
+        #     case 'on':
+        #         comms.turn_flashlight_on()
+        #     case 'off':
+        #         comms.turn_flashlight_off()
+        #     case "lel":
+        #         thrust = input(">")
+        #         comms.set_manual_thrust([float(thrust), 0, 0, 0, 0, 0])
