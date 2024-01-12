@@ -14,14 +14,14 @@ class MainWindow(QMainWindow):
         if e.key() == Qt.Key.Key_X:
             print("yay")
             self.comms.test_connection()
-            self.comms.set_manual_thrust(0.2, 0.2, 0.2, 0.2, 0.2, 0.2)
+            self.comms.set_manual_thrust([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
 
     def keyReleaseEvent(self, e):
         if not self.comms or e.isAutoRepeat():
             return
         
         if e.key() == Qt.Key.Key_X:
-            self.comms.set_manual_thrust(0, 0, 0, 0, 0, 0)
+            self.comms.set_manual_thrust([0, 0, 0, 0, 0, 0])
             print("yay off")
 
 
