@@ -250,7 +250,7 @@ class ThrusterController:
             print(f"MANUAL MOVE: target thrust set to {[*trans,*rot]}")
         self.target_thrust = [*trans, *self.target_thrust[3:6]]
         self.target_thrust = [*self.target_thrust[0:3], *rot]
-        self.mcu_interface.set_thrusters(self.calc_move(self.current_thrust[0:3], self.current_thrust[3:]))
+        self.mcu_interface.set_thrusters(self.calc_move(self.target_thrust[0:3], self.target_thrust[3:]))
 
         # if trans != None:
         #     self.target_thrust = [*trans, *self.target_thrust[3:6]]
