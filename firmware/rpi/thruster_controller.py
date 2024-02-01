@@ -165,8 +165,9 @@ class ThrusterController:
         pass
 
     def start_loop(self):
-        move_thread = threading.Thread(target=self.move_loop)
-        move_thread.start()
+        # move_thread = threading.Thread(target=self.move_loop)
+        # move_thread.start()
+        pass
 
     # moves ROV based on input data
     def move_loop(self):
@@ -247,11 +248,15 @@ class ThrusterController:
     def manual_move(self, trans=None, rot=None):
         if self.debug:
             print(f"MANUAL MOVE: target thrust set to {[*trans,*rot]}")
-        if trans != None:
-            self.target_thrust = [*trans, *self.target_thrust[3:6]]
-        if rot != None:
-            self.target_thrust = [*self.target_thrust[0:3], *rot]
-        self.thrust_in_position = False
+        self.target_thrust = [*trans, *self.target_thrust[3:6]]
+        self.target_thrust = [*self.target_thrust[0:3], *rot]
+        self.mcu_interface.set_thrusters(self.calc_move(self.current_thrust[0:3], self.current_thrust[3:]))
+
+        # if trans != None:
+        #     self.target_thrust = [*trans, *self.target_thrust[3:6]]
+        # if rot != None:
+        #     self.target_thrust = [*self.target_thrust[0:3], *rot]
+        # self.thrust_in_position = False
 
     # translates moves (-1 to 1) to microseconds
     def calc_move(self, pos_thrust, rot_thrust):
