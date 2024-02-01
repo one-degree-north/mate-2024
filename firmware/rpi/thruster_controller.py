@@ -84,7 +84,7 @@ class ThrusterController:
         self.thrust_in_position = False    # when true, disables current_timer
 
         self.mcu_interface = None
-        self.max_thrust = 0.3   # maximum thruster value allowed (0 to 1)
+        self.max_thrust = 0.5   # maximum thruster value allowed (0 to 1)
         self.passthrough=passthrough    # just write once (NOT COMPATABLE WITH PID!)
 
         self.stop_event=stop_event
@@ -94,22 +94,32 @@ class ThrusterController:
         self.pid_en = False
 
         # constants for adjusting maximum change in thrust
-        self.max_delta_current_ms = 0.01
+        self.max_delta_current_ms = 1
         self.target_thrust = [0, 0, 0, 0, 0, 0] # target thrust in axis (forward, side, up, pitch, roll, yaw)
         self.current_thrust = [0, 0, 0, 0, 0, 0] # current thrust in axis
 
-        self.ta = [0,1,2,3,4,5]    # thruster pins that match with configuration
-        self.reversed = [False, True, True, True, False, True, True, True]  # reversed thrusters
+        self.ta = [4,2,1,3,5,0]    # thruster pins that match with configuration
+        self.reversed = [True, True, False, True, False, False]  # reversed thrusters
         """Thruster pin configuration
-        0: right forward, 7, backward at 1200
-        1: left forward, 2, forward at 1200
-        2: left down, 0, backward at 1200
-        3: right down, 6, backward at 1200
+        0: right forward, 4, rev
+        1: left forward, 2, rev
+        2: left down, 1, ok
+        3: right down, 3, rev
         upward facing
-        4: right forward, 5, down at 1200
-        5: left forward, 3, up at 1200
+        4: right forward, 5, ok
+        5: left forward, 0, ok
+
+
         6: left down, 1, up at 1200
         7: right down, 4, down at 1200"""
+
+        """Thruster pin configuration
+        0: left mid, reverse
+        1: left back, reverse
+        2: left forward, ok
+        3: right back, reverse
+        4: right forward, ok
+        5: right mid, ok"""
 
     # way to solve circular dependency
     def set_interface(self, mcu_interface):
@@ -248,30 +258,33 @@ class ThrusterController:
         # TODO: Revise and check if this actually is an ok way to do this
         # somehow integrate pos_thrust and rot_thrust
         # transform forward, side, up, pitch, roll, yaw to thruster speeds
-        mov = move(*pos_thrust, *rot_thrust) # simplified thrusters with f, s, u, p, r, y
+        mov = move(*pos_thrust, *rot_thrust) # simplified thrusters with f, s, u, p, r
         total_thrust = [0, 0, 0, 0, 0, 0]
         # 0: right front, right mid, right down, left front, left mid, left down
 
 
         """Thruster pin configuration
-        0: right forward, 7, backward at 1200
-        1: left forward, 2, forward at 1200
-        2: left down, 0, backward at 1200
-        3: right down, 6, backward at 1200
-        upward facing
-        4: right forward, 5, down at 1200
-        5: left forward, 3, up at 1200
-        6: left down, 1, up at 1200
-        7: right down, 4, down at 1200"""
+        0: left mid, reverse
+        1: left back, reverse
+        2: left forward, ok
+        3: right back, reverse
+        4: right forward, ok
+        5: right mid, ok"""
 
 
-        total_thrust[self.ta[0]] = (mov.f - mov.s - mov.y)/3
+
+
+        total_thrust[self.ta[0]] = (mov.f - mov.s - mov.y)/3 # 
         total_thrust[self.ta[1]] = (mov.f + mov.s + mov.y)/3
         total_thrust[self.ta[2]] = (mov.f - mov.s + mov.y)/3
         total_thrust[self.ta[3]] = (mov.f + mov.s - mov.y)/3
 
         total_thrust[self.ta[4]] = (mov.u - mov.r)/2
         total_thrust[self.ta[5]] = (mov.u + mov.r)/2
+
+        for i in range(6):
+            if self.reversed[i]:
+                total_thrust[i] *= -1
 
         # total_thrust[self.ta[0]] = mov.f - mov.s - mov.y
         # total_thrust[self.ta[1]] = mov.f + mov.s + mov.y

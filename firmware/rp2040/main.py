@@ -78,7 +78,7 @@ class rp2040:
     def __init__(self):
         self.read_packet = Packet()
         # TODO: determine PWM on boards
-        self.pwm_pins = [board.D13, board.D12, board.D24, board.D25, board.SCK, board.MOSI]
+        self.pwm_pins = [board.D13, board.RX, board.D9, board.D5, board.MISO, board.SCL]
         self.pwms = []
         # Serial = usb_cdc.enable(console=False, data=True)
         self.serial = usb_cdc.data
