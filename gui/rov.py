@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
             print("manual thurst: ")
             print(temp_thrust)
             print(f"up thrust adjustments {self.up_thrust_adjustments}")
-            self.rov_comms.set_manual_thrust(temp_thrust)
+            self.comms.set_manual_thrust(temp_thrust)
 
     def keyReleaseEvent(self, e):
         if self.comms and not e.isAutoRepeat():
@@ -120,7 +120,7 @@ class MainWindow(QMainWindow):
             print("manual thurst: ")
             print(temp_thrust)
             print(f"up thrust adjustments {self.up_thrust_adjustments}")
-            self.rov_comms.set_manual_thrust(temp_thrust)
+            self.comms.set_manual_thrust(temp_thrust)
 
 
 if __name__ == "__main__":
