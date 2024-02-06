@@ -98,7 +98,15 @@ class ThrusterController:
         self.target_thrust = [0, 0, 0, 0, 0, 0] # target thrust in axis (forward, side, up, pitch, roll, yaw)
         self.current_thrust = [0, 0, 0, 0, 0, 0] # current thrust in axis
 
-        self.ta = [4,2,1,3,5,0]    # thruster pins that match with configuration
+        self.ta = [5,1,2,4,0,3]    # thruster pins that match with configuration
+        """
+        right forward
+        left forward
+        left back
+        right 
+        """
+
+
         self.reversed = [True, True, False, True, False, False]  # reversed thrusters
         """Thruster pin configuration
         0: right forward, 4, rev
@@ -120,6 +128,17 @@ class ThrusterController:
         3: right back, reverse
         4: right forward, ok
         5: right mid, ok"""
+
+        """
+        right mid: 0
+        left front: 1
+        left back: 2
+        left mid: 3
+        right back: 4
+        right front: 5
+        """
+
+
 
     # way to solve circular dependency
     def set_interface(self, mcu_interface):
@@ -276,6 +295,15 @@ class ThrusterController:
         4: right forward, ok
         5: right mid, ok"""
 
+        """
+        right mid: 0
+        left front: 1
+        left back: 2
+        left mid: 3
+        right back: 4
+        right front: 5
+        """
+
 
 
 
@@ -284,8 +312,8 @@ class ThrusterController:
         total_thrust[self.ta[2]] = (mov.f - mov.s + mov.y)/3
         total_thrust[self.ta[3]] = (mov.f + mov.s - mov.y)/3
 
-        total_thrust[self.ta[4]] = (mov.u - mov.r)/2
-        total_thrust[self.ta[5]] = (mov.u + mov.r)/2
+        total_thrust[self.ta[4]] = (mov.u - mov.r)/2 # right mid
+        total_thrust[self.ta[5]] = (mov.u + mov.r)/2 # left mid
 
         for i in range(6):
             if self.reversed[i]:
