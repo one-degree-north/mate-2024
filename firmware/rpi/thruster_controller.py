@@ -107,15 +107,15 @@ class ThrusterController:
         """
 
 
-        self.reversed = [True, True, False, True, False, False]  # reversed thrusters
+        self.reversed = [False, True, False, False, True, True]  # reversed thrusters
         """Thruster pin configuration
-        0: right forward, 4, rev
-        1: left forward, 2, rev
-        2: left down, 1, ok
-        3: right down, 3, rev
+        0: right forward, 5, rev
+        1: left forward, 1, rev
+        2: left down, 2, ok
+        3: right down, 4, rev
         upward facing
-        4: right forward, 5, ok
-        5: left forward, 0, ok
+        4: right forward, 0, ok
+        5: left forward, 3, ok
 
 
         6: left down, 1, up at 1200
@@ -136,6 +136,11 @@ class ThrusterController:
         left mid: 3
         right back: 4
         right front: 5
+        """
+
+        """
+        right mid: 0
+        left front: 1
         """
 
 
