@@ -41,7 +41,7 @@ def main(stop_event=None, use_stop_event=False, server_debug=False, data_debug=F
     interface.start()
     if config['use_bno']:
         print("starting BNO")
-        opi_data.start_bno_reading()
+        data_input.start_bno_reading()
     print("starting thruster controller")
     thrust_controller.start_loop()
     

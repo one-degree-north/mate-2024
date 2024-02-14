@@ -1,7 +1,7 @@
 # interperates and stores IMU data. Also autoreports data to surface.
 from dataclasses import dataclass
 from queue import Queue
-from threading import Thread
+import threading
 import time
 
 import sys
@@ -16,12 +16,13 @@ from Adafruit_BNO055 import BNO055
 
 # bno = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
 
-bno = BNO055.BNO055()
+# bno = BNO055.BNO055()
 
 class DataInput:
     def __init__(self, report_data=False, stop_event=None, use_stop_event=False, debug=False):
         self.bno = BNO055.BNO055()
         self.bno_read_delay = 0.01    # in seconds
+        self.data_thread = threading.Thread(target=self.bno_loop)
 
         self.data = {
             "acceleration":[0,0,0],
@@ -39,32 +40,35 @@ class DataInput:
         if self.debug:
             self.last_time = time.process_time_ns()
     
+    def start_bno_reading(self):
+        self.data_thread.start()
+
     def bno_loop(self):
         while True:
              # Read the Euler angles for heading, roll, pitch (all in degrees).
-            self.data["euler"] = bno.read_euler()
+            self.data["euler"] = self.bno.read_euler()
             # Read the calibration status, 0=uncalibrated and 3=fully calibrated.
-            self.data["calibration"] = bno.get_calibration_status()
+            self.data["calibration"] = self.bno.get_calibration_status()
             # Print everything out.
             # print('Heading={0:0.2F} Roll={1:0.2F} Pitch={2:0.2F}\tSys_cal={3} Gyro_cal={4} Accel_cal={5} Mag_cal={6}'.format(
             #     heading, roll, pitch, sys, gyro, accel, mag))
             # Other values you can optionally read:
             # Orientation as a quaternion:
-            self.data["quaterion"] = bno.read_quaterion()
+            self.data["quaterion"] = self.bno.read_quaterion()
             # Sensor temperature in degrees Celsius:
-            self.data["temperature"] = bno.read_temp()
+            self.data["temperature"] = self.bno.read_temp()
             # Magnetometer data (in micro-Teslas):
-            self.data["magnetometer"] = bno.read_magnetometer()
+            self.data["magnetometer"] = self.bno.read_magnetometer()
             # Gyroscope data (in degrees per second):
-            self.data["gyroscope"] = bno.read_gyroscope()
+            self.data["gyroscope"] = self.bno.read_gyroscope()
             # Accelerometer data (in meters per second squared):
-            self.data["acceleration"] = bno.read_accelerometer()
+            self.data["acceleration"] = self.bno.read_accelerometer()
             # Linear acceleration data (i.e. acceleration from movement, not gravity--
             # returned in meters per second squared):
-            self.data["linear_acceleration"] = bno.read_linear_acceleration()
+            self.data["linear_acceleration"] = self.bno.read_linear_acceleration()
             # Gravity acceleration data (i.e. acceleration just from gravity--returned
             # in meters per second squared):
-            self.data["gravity"] = bno.read_gravity()
+            self.data["gravity"] = self.bno.read_gravity()
             # Sleep for a second until the next reading.
 
             if self.debug:
@@ -76,7 +80,12 @@ class DataInput:
             time.sleep(self.bno_read_delay)
 
 
-
+if __name__ == "__main__":
+    data_input = DataInput()
+    data_input.start_bno_reading()
+    while True:
+        time.sleep(1)
+        print(data_input.data)
 
 # # Enable verbose debug logging if -v is passed as a parameter.
 # if len(sys.argv) == 2 and sys.argv[1].lower() == '-v':
