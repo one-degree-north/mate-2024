@@ -1,7 +1,7 @@
 # mcu_interface communicates with the microcontroller
 from dataclasses import dataclass
 import serial, struct, threading, time
-import Rpi.GPIO as GPIO
+import RPi.GPIO as GPIO
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -74,6 +74,7 @@ class MCUInterface:
         self.serial_port = serial_port
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
+        GPIO.setmode(GPIO.BOARD)
 
         self.ser_enabled = False
         self.read_packet = Packet()
