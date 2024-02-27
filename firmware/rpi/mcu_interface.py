@@ -1,6 +1,7 @@
 # mcu_interface communicates with the microcontroller
 from dataclasses import dataclass
 import serial, struct, threading, time
+import Rpi.GPIO as GPIO
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -86,7 +87,18 @@ class MCUInterface:
 
         self.bno_data = bno_data
         self.data_lock = data_lock
-    
+
+        self.claw_pwm = GPIO.PWM(12, 400)
+        self.claw_pwm.start(0.6)
+
+    def move_claw(self, deg):
+        dc = deg*(0.8/360)+0.2
+        if dc > 1:
+            dc = 1
+        if dc < 0.2:
+            dc = 0.2
+        self.claw_pwm.ChangeDutyCycle(dc)
+
     def init_serial(self):
         if 'ser' in dir(self):
             self.ser.close()
@@ -267,5 +279,8 @@ if __name__ == "__main__":
         if val == 'b':
             u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
             interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
+        if val == "claw":
+            deg = input("claw degree")
+            interface.move_claw(deg)
     
             
