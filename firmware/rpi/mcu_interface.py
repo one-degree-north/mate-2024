@@ -75,7 +75,7 @@ class MCUInterface:
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
         GPIO.setmode(GPIO.BOARD)
-	GPIO.setup(12, GPIO.OUT)
+        GPIO.setup(12, GPIO.OUT)
 
         self.ser_enabled = False
         self.read_packet = Packet()
