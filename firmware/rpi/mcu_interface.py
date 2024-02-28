@@ -282,7 +282,7 @@ if __name__ == "__main__":
             u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
             interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
         if val == "claw":
-            deg = input("claw degree")
+            deg = float(input("claw degree"))
             interface.move_claw(deg)
     
             
