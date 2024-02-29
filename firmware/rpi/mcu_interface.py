@@ -96,10 +96,10 @@ class MCUInterface:
         # self.claw_pwm = GPIO.PWM(12, 500)
         # self.claw_pwm.start(0.6)
 
-    def move_claw(self, oc):
-        if oc == 'o':
+    def move_claw(self, open):
+        if open:
             self.pwm.set_servo_pulsewidth(12, 1700)
-        elif oc == 'c':
+        else:
             self.pwm.set_servo_pulsewidth(12, 1300)
         # deg 
         # dc = deg*(0.25/360)+0.75
@@ -295,7 +295,7 @@ if __name__ == "__main__":
             interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
         if val == "claw":
             oc = input("claw o/c")
-            interface.move_claw(oc)
+            interface.move_claw(True if oc == 'o' else False)
         if val == "dclaw":
             interface.end_pwm()
 
