@@ -100,7 +100,7 @@ class MCUInterface:
         if open:
             self.pwm.set_servo_pulsewidth(12, 1700)
         else:
-            self.pwm.set_servo_pulsewidth(12, 1300)
+            self.pwm.set_servo_pulsewidth(12, 1200)
         # deg 
         # dc = deg*(0.25/360)+0.75
         # if dc > 1:
