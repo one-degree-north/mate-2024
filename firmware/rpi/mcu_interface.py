@@ -117,6 +117,10 @@ class MCUInterface:
             self.ser.open()
         self.read_thread.start()
 
+    def end_pwm(self):
+        self.claw_pwm.stop()
+        GPIO.cleanup()
+
     def _write_packet(self, cmd:int, param:int, data): #WRITE IS BIG ENDIAN!!!!
         try:
             # self.ser.reset_input_buffer()
@@ -284,5 +288,8 @@ if __name__ == "__main__":
         if val == "claw":
             deg = float(input("claw degree"))
             interface.move_claw(deg)
+        if val == "dclaw":
+            interface.end_pwm()
+
     
             
