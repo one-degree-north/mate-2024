@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.mosaic {
+	background: hsl(240 10% 3.9%);
+}
+
+.mosaic .mosaic-window-toolbar {
+	border-radius: 10px 10px 0 0;
+	background: hsl(240 3.7% 15.9%);
+	color: hsl(240 5% 64.9%);
+	font-family: monospace;
+}
+
+.mosaic .mosaic-window-body {
+	background: hsl(240 3% 10%);
+	border-radius: 0 0 10px 10px;
+	color: hsl(0 0% 75%);
+	font-family: monospace;
+}
+
+.mosaic .drop-target-container .drop-target {
+	background: hsla(240 4.9% 83.9% / 0.5);
+	transition: opacity 0.1s ease-in-out;
+	border-radius: 10px;
+	border: none;
+}
+
+.mosaic-split:hover {
+	background: none;
+}
