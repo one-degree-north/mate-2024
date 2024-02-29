@@ -98,9 +98,9 @@ class MCUInterface:
 
     def move_claw(self, oc):
         if oc == 'o':
-            self.pwm.set_servo_pulsewidth(12, 1200)
-        elif oc == 'c':
             self.pwm.set_servo_pulsewidth(12, 1700)
+        elif oc == 'c':
+            self.pwm.set_servo_pulsewidth(12, 1300)
         # deg 
         # dc = deg*(0.25/360)+0.75
         # if dc > 1:
