@@ -93,8 +93,8 @@ class MCUInterface:
         self.bno_data = bno_data
         self.data_lock = data_lock
 
-        self.claw_pwm = GPIO.PWM(12, 500)
-        self.claw_pwm.start(0.6)
+        # self.claw_pwm = GPIO.PWM(12, 500)
+        # self.claw_pwm.start(0.6)
 
     def move_claw(self, oc):
         if oc == 'o':
