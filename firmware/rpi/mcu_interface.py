@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import serial, struct, threading, time
 import RPi.GPIO as GPIO
+import pigpio
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -74,8 +75,10 @@ class MCUInterface:
         self.serial_port = serial_port
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(12, GPIO.OUT)
+
+        self.pwm = pigpio.pi()
+        self.pwm.set_mode(12, pigpio.OUTPUT)
+        self.pwm.set_PWM_frequency(12, 50)
 
         self.ser_enabled = False
         self.read_packet = Packet()
@@ -93,13 +96,18 @@ class MCUInterface:
         self.claw_pwm = GPIO.PWM(12, 500)
         self.claw_pwm.start(0.6)
 
-    def move_claw(self, deg):
-        dc = deg*(0.25/360)+0.75
-        if dc > 1:
-            dc = 1
-        if dc < 0.2:
-            dc = 0.2
-        self.claw_pwm.ChangeDutyCycle(dc)
+    def move_claw(self, oc):
+        if oc == 'o':
+            self.pwm.set_servo_pulsewidth(12, 1200)
+        elif oc == 'c':
+            self.pwm.set_servo_pulsewidth(12, 1700)
+        # deg 
+        # dc = deg*(0.25/360)+0.75
+        # if dc > 1:
+        #     dc = 1
+        # if dc < 0.2:
+        #     dc = 0.2
+        # self.claw_pwm.ChangeDutyCycle(dc)
 
     def init_serial(self):
         if 'ser' in dir(self):
@@ -286,8 +294,8 @@ if __name__ == "__main__":
             u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
             interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
         if val == "claw":
-            deg = float(input("claw degree"))
-            interface.move_claw(deg)
+            oc = input("claw o/c")
+            interface.move_claw(oc)
         if val == "dclaw":
             interface.end_pwm()
 
