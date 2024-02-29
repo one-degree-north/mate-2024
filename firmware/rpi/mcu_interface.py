@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import serial, struct, threading, time
 import RPi.GPIO as GPIO
 import pigpio
-import subprocess
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -74,7 +73,6 @@ class Packet:
 class MCUInterface:
     def __init__(self, serial_port="/dev/ttyACM0", stop_event=None, use_stop_event=False, debug=False, write_delay=0.05, bno_data=None, data_lock=None):
         self.serial_port = serial_port
-        # subprocess.run(["sudo", "pigpiod"])
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
 
