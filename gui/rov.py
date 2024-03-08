@@ -73,6 +73,13 @@ class MainWindow(QMainWindow):
                 self.target_thrust[5] = -1
             if e.key() == Qt.Key.Key_L:
                 self.target_thrust[5] = 1
+            if e.key() == Qt.Key.Key_C:
+                if self.claw_open:
+                    self.claw_open = False
+                    self.comms.close_claw()
+                else:
+                    self.claw_open = True
+                    self.comms.open_claw()
             temp_thrust = [0, 0, 0, 0, 0, 0]
             for i in range(6):
                 temp_thrust[i] = self.target_thrust[i]* self.speed
