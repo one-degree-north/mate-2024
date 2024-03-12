@@ -239,6 +239,11 @@ class PIClient:
     def set_pid_target(self, moves):    # moves are in target m/s
         self.out_queue.put(struct.pack("!cffffff", bytes([0x21]), *(moves[0:6])))
 
+    def open_claw(self):
+        self.out_queue.put(struct.pack("!C", bytes([0x30])))
+    
+    def close_claw(self):
+        self.out_queue.put(struct.pack("!C", bytes([0x31])))
     # def set_pos_manual(self, moves):
     #     self.out_queue.put(struct.pack("!cfff", bytes([0x20]), *moves))
     

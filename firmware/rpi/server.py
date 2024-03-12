@@ -92,8 +92,11 @@ class OPiServer:
                 self.thruster_control.set_thrust(trans=trans, rot=rot, pid=True)
         elif cmd == 0x22:   # set manual pos
             pass
-        elif cmd == 0x30:
-            pass
+        elif cmd == 0x30:   # close claw
+            self.interface.move_claw(False)
+        elif cmd == 0x31:   # open claw
+            self.interface.move_claw(True)
+            
     
     #data is little endian
     def send_data(self, data):

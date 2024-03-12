@@ -274,7 +274,7 @@ class ThrusterController:
         # TODO: Revise and check if this actually is an ok way to do this
         # somehow integrate pos_thrust and rot_thrust
         # transform forward, side, up, pitch, roll, yaw to thruster speeds
-        mov = move(*pos_thrust, *rot_thrust) # simplified thrusters with f, s, u, p, r
+        mov = move(*pos_thrust, *rot_thrust) # simplified thrusters with f, s, u, p, r, y
         total_thrust = [0, 0, 0, 0, 0, 0]
         # 0: right front, right mid, right down, left front, left mid, left down
 
