@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
                 self.speed = 0.3
             if e.key() == Qt.Key.Key_BracketRight:
                 self.speed += 0.1
-            if e.key() == Qt.Key.Key_BracketRight:
+            if e.key() == Qt.Key.Key_BracketLeft:
                 self.speed -= 0.1
             if e.key() == Qt.Key.Key_W:
                 self.target_thrust[0] = 1
