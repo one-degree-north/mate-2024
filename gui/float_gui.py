@@ -130,7 +130,7 @@ class MainFloatWindow(QMainWindow):
         self.graph_section = FigureCanvasQTAgg(self.graph)
         self.axes = self.graph.add_subplot()
         self.axes.plot(self.xAxis,self.yAxis)
-      
+        
 
         self.buttons = QWidget()
         self.buttons.layout = QVBoxLayout()
