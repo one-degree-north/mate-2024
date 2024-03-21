@@ -38,8 +38,9 @@ class CombinedGUIWindow(QMainWindow):
             }
 
             QPushButton:pressed {
-                background-color: lightblue;
-                border-color: gray;
+                background-color: rgb(242, 210, 255);
+                border-color: solid white;
+                color: rgb(22, 50, 115)
             }
             """
         )
@@ -57,8 +58,9 @@ class CombinedGUIWindow(QMainWindow):
             }
 
             QPushButton:pressed {
-                background-color: lightblue;
-                border-color: gray;
+                background-color: rgb(242, 210, 255);
+                border-color: solid white;
+                color: rgb(22, 50, 115)
             }
             """
         )

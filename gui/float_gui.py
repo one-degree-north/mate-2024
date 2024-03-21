@@ -149,8 +149,9 @@ class MainFloatWindow(QMainWindow):
         }
 
         QPushButton:pressed {
-            background-color: lightblue;
+            background-color: rgb(242, 210, 255);
             border-color: gray;
+            color: rgb(22, 50, 115)
         }
         """
     )
