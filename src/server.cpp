@@ -1,6 +1,6 @@
 extern "C" {
-    #include <linux/i2c-dev.h>
-    #include <i2c/smbus.h>
+#include <linux/i2c-dev.h>
+#include <i2c/smbus.h>
 }
 
 #include <gst/gst.h>
@@ -88,16 +88,23 @@ void bno_data_thread() {
 int main() {
     std::thread bno_thread(bno_data_thread);
 
+    gst_init(NULL, NULL);
+
+    std::string gst_pipeline = " ! rtpjpegpay ! udpsink port=6970 host=" + client_address;
     int video_stream = open("/dev/video0", O_RDONLY);
     if (video_stream < 0) {
-        std::cerr << "Error: Unable to open video stream" << std::endl;
-        std::exit(1);
+        std::cerr << "Error: Unable to open video stream. Using test stream." << std::endl;
+        gst_pipeline = "videotestsrc ! jpegenc " + gst_pipeline;
+    } else {
+        gst_pipeline = "v4l2src device=/dev/video0" + gst_pipeline;
+        close(video_stream);
     }
-    close(video_stream);
 
-    GstElement *pipeline = gst_parse_launch((R"(v4l2src device=/dev/video0 ! "image/jpeg, width=1920, height=1080" ! rtpjpegpay ! udpsink port=6970 host=")" + client_address + "\"").c_str()  , NULL);
-    if (!pipeline) {
-        std::cerr << "Error: Unable to create pipeline" << std::endl;
+    std::cout << "Using pipeline: " << gst_pipeline << std::endl;
+    GError *error = nullptr;
+    GstElement *pipeline = gst_parse_launch(gst_pipeline.c_str(), &error);
+    if (error) {
+        std::cerr << "Error: Unable to create pipeline. " << error->message << std::endl;
         std::exit(1);
     }
 

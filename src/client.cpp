@@ -41,18 +41,18 @@ int main(int argc, char** argv) {
     if (!glfwInit()) return 1;
 
 
-    #if defined(__APPLE__)
-        const char* glsl_version = "#version 150";
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #else
-        const char* glsl_version = "#version 130";
+#if defined(__APPLE__)
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#else
+    const char* glsl_version = "#version 130";
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #endif
+#endif
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "MATE Client", nullptr, nullptr);
     if (window == nullptr) return 1;
@@ -61,8 +61,7 @@ int main(int argc, char** argv) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGuiIO& io = ImGui::GetIO(); (void) io;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui::StyleColorsDark();
 
@@ -72,7 +71,7 @@ int main(int argc, char** argv) {
     glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 
     gst_init(&argc, &argv);
-    pipeline = gst_parse_launch(R"(udpsrc port=6970 caps="application/x-rtp, encoding-name=JPEG" ! rtpjpegdepay ! jpegdec ! videoconvert ! appsink name=sink caps="video/x-raw, format=RGB")", nullptr);
+    pipeline = gst_parse_launch(R"(udpsrc port=6970 caps="application/x-rtp, encoding-name=JPEG" ! rtpjpegdepay ! jpegdec ! queue ! videoconvert ! appsink name=sink caps="video/x-raw, format=RGB")", nullptr);
 
     GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
     if (!sink) {
@@ -84,12 +83,13 @@ int main(int argc, char** argv) {
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
 
-    int width = 0;
-    int height = 0;
 
-    GLuint videotex;
-    glGenTextures (1, &videotex);
-    glBindTexture (GL_TEXTURE_2D, videotex);
+    int videoWidth;
+    int videoHeight;
+    GLuint videoTexture;
+
+    glGenTextures (1, &videoTexture);
+    glBindTexture (GL_TEXTURE_2D, videoTexture);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
@@ -101,14 +101,8 @@ int main(int argc, char** argv) {
 
     struct vec3 { double x, y, z; };
     struct vec4 { double w, x, y, z; };
-    struct {
-        vec3 acc, mag, gyro, euler, lin_acc, grav;
-        double temp;
-        vec4 quat;
-    } sensor_data {};
-    struct {
-        int system, gyro, acc, mag;
-    } calibration_status {};
+    struct { vec3 acc, mag, gyro, euler, lin_acc, grav; double temp; vec4 quat; } sensor_data {};
+    struct { int system, gyro, acc, mag; } calibration_status {};
     bool bnoDataReceived = false;
     bool bnoIsConfiguring = false;
 
@@ -118,25 +112,25 @@ int main(int argc, char** argv) {
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) break;
 
-        GstSample* videosample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink), 5 * GST_MSECOND);
-        if (videosample) {
-            if (width == 0 || height == 0) {
-                GstCaps *caps = gst_sample_get_caps(videosample);
+        GstSample* videoSample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink),  GST_MSECOND);
+        if (videoSample) {
+            if (videoWidth == 0 || videoHeight == 0) {
+                GstCaps *caps = gst_sample_get_caps(videoSample);
                 GstStructure *structure = gst_caps_get_structure(caps, 0);
 
-                gst_structure_get_int(structure, "width", &width);
-                gst_structure_get_int(structure, "height", &height);
+                gst_structure_get_int(structure, "width", &videoWidth);
+                gst_structure_get_int(structure, "height", &videoHeight);
             }
 
-            GstBuffer* videobuf = gst_sample_get_buffer(videosample);
+            GstBuffer* videoBuffer = gst_sample_get_buffer(videoSample);
             GstMapInfo map;
 
-            gst_buffer_map (videobuf, &map, GST_MAP_READ);
+            gst_buffer_map (videoBuffer, &map, GST_MAP_READ);
 
-            glBindTexture(GL_TEXTURE_2D, videotex);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
-            gst_buffer_unmap(videobuf, &map);
-            gst_sample_unref(videosample);
+            glBindTexture(GL_TEXTURE_2D, videoTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, videoWidth, videoHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
+            gst_buffer_unmap(videoBuffer, &map);
+            gst_sample_unref(videoSample);
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -215,46 +209,41 @@ int main(int argc, char** argv) {
                     bnoDataReceived = true;
                     bnoIsConfiguring = false;
 
-                    sensor_data.acc.x = (int16_t) ((buffer[2] << 8 | buffer[1]) & 0xFFFF) / 100.0;
-                    sensor_data.acc.y = (int16_t) ((buffer[4] << 8 | buffer[3]) & 0xFFFF) / 100.0;
-                    sensor_data.acc.z = (int16_t) ((buffer[6] << 8 | buffer[5]) & 0xFFFF) / 100.0;
+                    union {
+                        struct {
+                            int16_t acc_x, acc_y, acc_z;
+                            int16_t mag_x, mag_y, mag_z;
+                            int16_t gyro_x, gyro_y, gyro_z;
+                            int16_t euler_x, euler_y, euler_z;
+                            int16_t quat_w, quat_x, quat_y, quat_z;
+                            int16_t lin_acc_x, lin_acc_y, lin_acc_z;
+                            int16_t grav_x, grav_y, grav_z;
+                            int8_t temp;
+                        };
+                        uint8_t data[45];
+                    } unscaled{};
+                    std::copy(buffer.begin() + 1, buffer.end(), unscaled.data);
 
-                    sensor_data.mag.x = (int16_t) ((buffer[8] << 8 | buffer[7]) & 0xFFFF) / 16.0;
-                    sensor_data.mag.y = (int16_t) ((buffer[10] << 8 | buffer[9]) & 0xFFFF) / 16.0;
-                    sensor_data.mag.z = (int16_t) ((buffer[12] << 8 | buffer[11]) & 0xFFFF) / 16.0;
+                    sensor_data.acc = {unscaled.acc_x / 100.0, unscaled.acc_y / 100.0, unscaled.acc_z / 100.0};
+                    sensor_data.mag = {unscaled.mag_x / 16.0, unscaled.mag_y / 16.0, unscaled.mag_z / 16.0};
+                    sensor_data.gyro = {unscaled.gyro_x / 16.0, unscaled.gyro_y / 16.0, unscaled.gyro_z / 16.0};
+                    sensor_data.euler = {unscaled.euler_x / 16.0, unscaled.euler_y / 16.0, unscaled.euler_z / 16.0};
+                    sensor_data.quat = {unscaled.quat_w / 16384.0, unscaled.quat_x / 16384.0, unscaled.quat_y / 16384.0, unscaled.quat_z / 16384.0};
+                    sensor_data.lin_acc = {unscaled.lin_acc_x / 100.0, unscaled.lin_acc_y / 100.0, unscaled.lin_acc_z / 100.0};
+                    sensor_data.grav = {unscaled.grav_x / 100.0, unscaled.grav_y / 100.0, unscaled.grav_z / 100.0};
+                    sensor_data.temp = unscaled.temp;
 
-                    sensor_data.gyro.x = (int16_t) ((buffer[14] << 8 | buffer[13]) & 0xFFFF) / 16.0;
-                    sensor_data.gyro.y = (int16_t) ((buffer[16] << 8 | buffer[15]) & 0xFFFF) / 16.0;
-                    sensor_data.gyro.z = (int16_t) ((buffer[18] << 8 | buffer[17]) & 0xFFFF) / 16.0;
-
-                    sensor_data.euler.x = (int16_t) ((buffer[20] << 8 | buffer[19]) & 0xFFFF) / 16.0;
-                    sensor_data.euler.y = (int16_t) ((buffer[22] << 8 | buffer[21]) & 0xFFFF) / 16.0;
-                    sensor_data.euler.z = (int16_t) ((buffer[24] << 8 | buffer[23]) & 0xFFFF) / 16.0;
-
-                    sensor_data.quat.w = (int16_t) ((buffer[26] << 8 | buffer[25]) & 0xFFFF) / 16384.0;
-                    sensor_data.quat.x = (int16_t) ((buffer[28] << 8 | buffer[27]) & 0xFFFF) / 16384.0;
-                    sensor_data.quat.y = (int16_t) ((buffer[30] << 8 | buffer[29]) & 0xFFFF) / 16384.0;
-                    sensor_data.quat.z = (int16_t) ((buffer[32] << 8 | buffer[31]) & 0xFFFF) / 16384.0;
-
-                    sensor_data.lin_acc.x = (int16_t) ((buffer[34] << 8 | buffer[33]) & 0xFFFF) / 100.0;
-                    sensor_data.lin_acc.y = (int16_t) ((buffer[36] << 8 | buffer[35]) & 0xFFFF) / 100.0;
-                    sensor_data.lin_acc.z = (int16_t) ((buffer[38] << 8 | buffer[37]) & 0xFFFF) / 100.0;
-
-                    sensor_data.grav.x = (int16_t) ((buffer[40] << 8 | buffer[39]) & 0xFFFF) / 100.0;
-                    sensor_data.grav.y = (int16_t) ((buffer[42] << 8 | buffer[41]) & 0xFFFF) / 100.0;
-                    sensor_data.grav.z = (int16_t) ((buffer[44] << 8 | buffer[43]) & 0xFFFF) / 100.0;
-
-                    sensor_data.temp = buffer[45];
                     break;
             }
         }
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Camera Stream");
+
         ImVec2 windowSize = ImGui::GetWindowSize();
         windowSize.y -= ImGui::GetFrameHeight();
 
-        ImVec2 imageSize((float) width, (float) height);
+        ImVec2 imageSize((float) videoWidth, (float) videoHeight);
 
         if (windowSize.x / windowSize.y > imageSize.x / imageSize.y) {
             imageSize.x = windowSize.y * imageSize.x / imageSize.y;
@@ -266,11 +255,70 @@ int main(int argc, char** argv) {
             ImGui::SetCursorPosY(ImGui::GetFrameHeight() + (windowSize.y - imageSize.y) / 2);
         }
 
-        ImGui::Image((void*)(intptr_t)videotex, imageSize, ImVec2(0, 0), ImVec2(1, 1));
+        ImGui::Image((void*)(intptr_t)videoTexture, imageSize, ImVec2(0, 0), ImVec2(1, 1));
+
         ImGui::End();
         ImGui::PopStyleVar();
 
+        ImGui::Begin("Thruster Control");
+        {
+            const ImVec2 key_size = ImVec2(35.0f, 35.0f);
+            const float  key_rounding = 3.0f;
+            const ImVec2 key_face_size = ImVec2(25.0f, 25.0f);
+            const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f);
+            const float  key_face_rounding = 2.0f;
+            const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f);
+            const ImVec2 key_step = ImVec2(key_size.x - 1.0f, key_size.y - 1.0f);
+            const float  key_row_offset = 9.0f;
+
+            ImVec2 board_min = ImGui::GetCursorScreenPos();
+            ImVec2 board_max = ImVec2(board_min.x + 9 * key_step.x + 2 * key_row_offset + 10.0f, board_min.y + 4 * key_step.y + 10.0f);
+            ImVec2 start_pos = ImVec2(board_min.x + 5.0f - key_step.x, board_min.y);
+
+            struct KeyLayoutData { int Row, Col; const char* Label; ImGuiKey Key; };
+            const KeyLayoutData keys_to_display[] = {
+                    { 0, 0, "", ImGuiKey_Tab },      { 0, 1, "Q", ImGuiKey_Q }, { 0, 2, "W", ImGuiKey_W }, { 0, 3, "E", ImGuiKey_E }, { 0, 4, "R", ImGuiKey_R }, { 0, 5, "T", ImGuiKey_T }, { 0, 6, "Y", ImGuiKey_Y }, { 0, 7, "U", ImGuiKey_U }, { 0, 8, "I", ImGuiKey_I }, { 0, 9, "O", ImGuiKey_O }, { 0, 10, "P", ImGuiKey_P },
+                    { 1, 0, "", ImGuiKey_CapsLock }, { 1, 1, "A", ImGuiKey_A }, { 1, 2, "S", ImGuiKey_S }, { 1, 3, "D", ImGuiKey_D }, { 1, 4, "F", ImGuiKey_F }, { 1, 5, "G", ImGuiKey_G }, { 1, 6, "H", ImGuiKey_H }, { 1, 7, "J", ImGuiKey_J }, { 1, 8, "K", ImGuiKey_K }, { 1, 9, "L", ImGuiKey_L }, { 1, 10, "", ImGuiKey_Enter },
+                    { 2, 0, "", ImGuiKey_LeftShift },{ 2, 1, "Z", ImGuiKey_Z }, { 2, 2, "X", ImGuiKey_X }, { 2, 3, "C", ImGuiKey_C }, { 2, 4, "V", ImGuiKey_V }, { 2, 5, "B", ImGuiKey_B }, { 2, 6, "N", ImGuiKey_N }, { 2, 7, "M", ImGuiKey_M }, { 2, 8, ",", ImGuiKey_Comma }, { 2, 9, ".", ImGuiKey_Period }, { 2, 10, "/", ImGuiKey_Slash },
+            };
+
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->PushClipRect(board_min, board_max, true);
+            for (int n = 0; n < IM_ARRAYSIZE(keys_to_display); n++)
+            {
+                const KeyLayoutData* key_data = &keys_to_display[n];
+                ImVec2 key_min = ImVec2(start_pos.x + key_data->Col * key_step.x + key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
+                ImVec2 key_max = ImVec2(key_min.x + key_size.x, key_min.y + key_size.y);
+                draw_list->AddRectFilled(key_min, key_max, IM_COL32(204, 204, 204, 255), key_rounding);
+                draw_list->AddRect(key_min, key_max, IM_COL32(24, 24, 24, 255), key_rounding);
+                ImVec2 face_min = ImVec2(key_min.x + key_face_pos.x, key_min.y + key_face_pos.y);
+                ImVec2 face_max = ImVec2(face_min.x + key_face_size.x, face_min.y + key_face_size.y);
+                draw_list->AddRect(face_min, face_max, IM_COL32(193, 193, 193, 255), key_face_rounding, ImDrawFlags_None, 2.0f);
+                draw_list->AddRectFilled(face_min, face_max, IM_COL32(252, 252, 252, 255), key_face_rounding);
+                ImVec2 label_min = ImVec2(key_min.x + key_label_pos.x, key_min.y + key_label_pos.y);
+                draw_list->AddText(label_min, IM_COL32(64, 64, 64, 255), key_data->Label);
+                if (ImGui::IsKeyDown(key_data->Key))
+                    draw_list->AddRectFilled(key_min, key_max, IM_COL32(255, 0, 0, 128), key_rounding);
+            }
+            draw_list->PopClipRect();
+            ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickUp)) ImGui::Text("GamepadLStickUp");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown)) ImGui::Text("GamepadLStickDown");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickLeft)) ImGui::Text("GamepadLStickLeft");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickRight)) ImGui::Text("GamepadLStickRight");
+
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickUp)) ImGui::Text("GamepadRStickUp");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickDown)) ImGui::Text("GamepadRStickDown");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickLeft)) ImGui::Text("GamepadRStickLeft");
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickRight)) ImGui::Text("GamepadRStickRight");
+
+        ImGui::End();
+
         ImGui::Render();
+
+
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
