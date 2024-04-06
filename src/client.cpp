@@ -304,15 +304,26 @@ int main(int argc, char** argv) {
             ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
         }
 
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickUp)) ImGui::Text("GamepadLStickUp");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown)) ImGui::Text("GamepadLStickDown");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickLeft)) ImGui::Text("GamepadLStickLeft");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadLStickRight)) ImGui::Text("GamepadLStickRight");
+        int present = glfwJoystickPresent(GLFW_JOYSTICK_1);
+        if (present == GLFW_TRUE) {
+            int axesCount;
+            const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
 
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickUp)) ImGui::Text("GamepadRStickUp");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickDown)) ImGui::Text("GamepadRStickDown");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickLeft)) ImGui::Text("GamepadRStickLeft");
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadRStickRight)) ImGui::Text("GamepadRStickRight");
+            int buttonCount;
+            const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
+
+            ImGui::Text("Axes: %d", axesCount);
+            for (int i = 0; i < axesCount; i++) {
+                ImGui::Text("Axis %d: %f", i, axes[i]);
+            }
+
+            ImGui::Text("Buttons: %d", buttonCount);
+            for (int i = 0; i < buttonCount; i++) {
+                ImGui::Text("Button %d: %d", i, buttons[i]);
+            }
+        } else {
+            ImGui::Text("No Joystick Detected");
+        }
 
         ImGui::End();
 
