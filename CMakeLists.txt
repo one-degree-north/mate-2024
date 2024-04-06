@@ -30,6 +30,8 @@ if (BUILD_CLIENT)
     add_subdirectory(lib/glfw)
     find_package(OpenGL REQUIRED)
 
+    include_directories(lib/glfw/include)
+
     file(GLOB_RECURSE IMGUI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/*.cpp)
     add_library(imgui ${IMGUI_SOURCES})
     include_directories(lib/imgui)
