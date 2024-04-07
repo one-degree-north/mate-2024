@@ -319,6 +319,8 @@ int main(int argc, char** argv) {
         if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thruster_data.speed = 4;
         if (thruster_data.speed < 0) thruster_data.speed = 0;
 
+        ImGui::Text("Speed: %d", thruster_data.speed);
+
         bool controlDataChanged = false;
         auto bindThrusterKey = [&](ImGuiKey key, int value, int8_t& thruster) {
             if (ImGui::IsKeyPressed(key, false)) {
@@ -347,7 +349,7 @@ int main(int argc, char** argv) {
             controlDataChanged = true;
         }
 
-        if (controlDataChanged) communication.send({0x02, thruster_data.data[0], thruster_data.data[1], thruster_data.data[2], thruster_data.data[3], thruster_data.data[4], thruster_data.data[5]});
+        if (controlDataChanged) communication.send({0x02, thruster_data.data[0], thruster_data.data[1], thruster_data.data[2], thruster_data.data[3], thruster_data.data[4], thruster_data.data[5], thruster_data.data[6]});
 
         ImGui::End();
 

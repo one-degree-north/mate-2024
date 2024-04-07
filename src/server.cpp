@@ -197,17 +197,17 @@ int main() {
                             uint8_t footer = 0x7A;
                         };
                         uint8_t buffer[17];
-                    };
+                    } thruster_command{};
 
-                    total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
-                    total_thrust[thruster_pins[1]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
-                    total_thrust[thruster_pins[2]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
-                    total_thrust[thruster_pins[3]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[1]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[2]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[3]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
 
-                    total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
-                    total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    write(serial_port, buffer, 17);
+                    write(serial_port, thruster_command.buffer, 17);
                     break;
                 }
                 case 0x03: { // set BNO055 calibration status
