@@ -92,6 +92,7 @@ int open_feather() {
         std::cerr << "Error: Unable to open serial port" << std::endl;
         std::exit(1);
     }
+    std::cout << "Opened serial port" << std::endl;
 
     struct termios tty;
     if (tcgetattr(serial_port, &tty) != 0) {
@@ -126,6 +127,7 @@ int open_feather() {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
         return 1;
     }
+    std::cout << "Set serial port attributes" << std::endl;
 
     return serial_port;
 }
@@ -204,7 +206,10 @@ int main() {
                     thruster_command.total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    write(serial_port, thruster_command.buffer, 17);
+                    if (write(serial_port, thruster_command.buffer, 17) < 0) {
+                        std::cerr << "Error: Unable to write to serial port" << std::endl;
+                        std::exit(1);
+                    }
                     break;
                 }
                 case 0x03: { // set BNO055 calibration status
