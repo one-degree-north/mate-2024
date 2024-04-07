@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 
 #include <gst/gst.h>
 #include <gst/app/app.h>
@@ -106,13 +107,18 @@ int main(int argc, char** argv) {
     bool bnoDataReceived = false;
     bool bnoIsConfiguring = false;
 
+    union {
+        struct { int8_t front, side, up, pitch, roll, yaw, claw, speed; };
+        uint8_t data[7];
+    } thruster_data {};
+
     std::vector<uint8_t> buffer;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) break;
 
-        GstSample* videoSample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink),  GST_MSECOND);
+        GstSample* videoSample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink),  GST_NSECOND);
         if (videoSample) {
             if (videoWidth == 0 || videoHeight == 0) {
                 GstCaps *caps = gst_sample_get_caps(videoSample);
@@ -304,26 +310,44 @@ int main(int argc, char** argv) {
             ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
         }
 
-        int present = glfwJoystickPresent(GLFW_JOYSTICK_1);
-        if (present == GLFW_TRUE) {
-            int axesCount;
-            const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
+        if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thruster_data.speed++;
+        if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thruster_data.speed--;
+        if (ImGui::IsKeyPressed(ImGuiKey_0, false)) thruster_data.speed = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_1, false)) thruster_data.speed = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_2, false)) thruster_data.speed = 2;
+        if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thruster_data.speed = 3;
+        if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thruster_data.speed = 4;
+        if (thruster_data.speed < 0) thruster_data.speed = 0;
 
-            int buttonCount;
-            const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
-
-            ImGui::Text("Axes: %d", axesCount);
-            for (int i = 0; i < axesCount; i++) {
-                ImGui::Text("Axis %d: %f", i, axes[i]);
+        bool controlDataChanged = false;
+        auto bindThrusterKey = [&](ImGuiKey key, int value, int8_t& thruster) {
+            if (ImGui::IsKeyPressed(key, false)) {
+                thruster = value;
+                controlDataChanged = true;
+            } else if (ImGui::IsKeyReleased(key)) {
+                thruster = 0;
+                controlDataChanged = true;
             }
+        };
 
-            ImGui::Text("Buttons: %d", buttonCount);
-            for (int i = 0; i < buttonCount; i++) {
-                ImGui::Text("Button %d: %d", i, buttons[i]);
-            }
-        } else {
-            ImGui::Text("No Joystick Detected");
+        bindThrusterKey(ImGuiKey_W, thruster_data.speed, thruster_data.front);
+        bindThrusterKey(ImGuiKey_S, -thruster_data.speed, thruster_data.front);
+        bindThrusterKey(ImGuiKey_A, -thruster_data.speed, thruster_data.side);
+        bindThrusterKey(ImGuiKey_D, thruster_data.speed, thruster_data.side);
+        bindThrusterKey(ImGuiKey_Space, thruster_data.speed, thruster_data.up);
+        bindThrusterKey(ImGuiKey_LeftShift, -thruster_data.speed, thruster_data.up);
+        bindThrusterKey(ImGuiKey_O, thruster_data.speed, thruster_data.pitch);
+        bindThrusterKey(ImGuiKey_U, -thruster_data.speed, thruster_data.pitch);
+        bindThrusterKey(ImGuiKey_J, -thruster_data.speed, thruster_data.roll);
+        bindThrusterKey(ImGuiKey_L, thruster_data.speed, thruster_data.roll);
+        bindThrusterKey(ImGuiKey_Q, -thruster_data.speed, thruster_data.yaw);
+        bindThrusterKey(ImGuiKey_E, thruster_data.speed, thruster_data.yaw);
+        if (ImGui::IsKeyPressed(ImGuiKey_C, false)) {
+            thruster_data.claw = 1;
+            controlDataChanged = true;
         }
+
+        if (controlDataChanged) communication.send({0x02, thruster_data.data[0], thruster_data.data[1], thruster_data.data[2], thruster_data.data[3], thruster_data.data[4], thruster_data.data[5]});
 
         ImGui::End();
 

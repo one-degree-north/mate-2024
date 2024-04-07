@@ -9,6 +9,7 @@ extern "C" {
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <termios.h>
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -85,8 +86,54 @@ void bno_data_thread() {
     }
 }
 
+int open_feather() {
+    int serial_port = open("/dev/ttyUSB0", O_RDWR);
+    if (serial_port < 0) {
+        std::cerr << "Error: Unable to open serial port" << std::endl;
+        std::exit(1);
+    }
+
+    struct termios tty;
+    if (tcgetattr(serial_port, &tty) != 0) {
+        std::cerr << "Error: Unable to get serial port attributes" << std::endl;
+        std::exit(1);
+    }
+
+    tty.c_cflag &= ~PARENB; // No parity
+    tty.c_cflag &= ~CSTOPB; // One stop bit
+    tty.c_cflag &= ~CSIZE; // Clear data size
+    tty.c_cflag |= CS8; // 8 bits per byte
+    tty.c_cflag &= ~CRTSCTS; // No hardware flow control
+    tty.c_cflag |= CREAD | CLOCAL; // Enable reading and ignore control lines
+
+    tty.c_lflag &= ~ICANON; // Disable canonical mode
+    tty.c_lflag &= ~ECHO; // Disable echo
+    tty.c_lflag &= ~ECHOE; // Disable erasure
+    tty.c_lflag &= ~ECHONL; // Disable newline echo
+    tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+    tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
+
+    tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+    tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+
+    tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+    tty.c_cc[VMIN] = 0;
+
+    cfsetspeed(&tty, B9600); // Set baud rate
+
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+        return 1;
+    }
+
+    return serial_port;
+}
+
 int main() {
     std::thread bno_thread(bno_data_thread);
+
+    int serial_port = open_feather();
 
     gst_init(NULL, NULL);
 
@@ -123,9 +170,44 @@ int main() {
                     break;
                 }
                 case 0x02: { // set thruster info
-                    if (n != 13) goto invalid; // 6 * 2 (sizeof(short int)) + 1
+                    if (n != 8) goto invalid;
 
-                    std::cout << "Set thruster info" << std::endl;
+                    auto double_to_duty_cycle = [](double x) {
+                        unsigned short clock_thrust = (int) (3 * (1 << 14) + x * (((1 << 16) - 1) - (1 << 15)) / 2.0);
+                        if (clock_thrust > (1 << 16) - 1) clock_thrust = (1 << 16) - 1;
+                        if (clock_thrust < (1 << 15)) clock_thrust = (1 << 15);
+                        return clock_thrust;
+                    };
+
+                    union {
+                        struct {int8_t forward, side, up, pitch, yaw, roll;};
+                        uint8_t buffer[6];
+                    } thruster_info{};
+                    std::copy(buffer.begin() + 1, buffer.begin() + 7, thruster_info.buffer);
+
+                    const int thruster_pins[] = {5, 1, 2, 4, 0, 3};
+
+                    union {
+                        struct {
+                            uint8_t header = 0xA7;
+                            uint8_t command = 0x18;
+                            uint8_t param = 0x0F;
+                            uint8_t len = 12;
+                            unsigned short total_thrust[6];
+                            uint8_t footer = 0x7A;
+                        };
+                        uint8_t buffer[17];
+                    };
+
+                    total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+                    total_thrust[thruster_pins[1]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    total_thrust[thruster_pins[2]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+                    total_thrust[thruster_pins[3]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+
+                    total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
+                    total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
+
+                    write(serial_port, buffer, 17);
                     break;
                 }
                 case 0x03: { // set BNO055 calibration status
