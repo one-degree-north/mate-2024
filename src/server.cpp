@@ -87,7 +87,7 @@ void bno_data_thread() {
 }
 
 int open_feather() {
-    int serial_port = open("/dev/ttyACM0", O_RDWR);
+    int serial_port = open("/dev/ttyACM0", O_RDWR | O_NONBLOCK | O_NOCTTY);
     if (serial_port < 0) {
         std::cerr << "Error: Unable to open serial port" << std::endl;
         std::exit(1);
@@ -189,11 +189,8 @@ int main() {
 
                     union {
                         struct {
-                            uint8_t header = 0xA7;
-                            uint8_t command = 0x18;
-                            uint8_t param = 0x0F;
-                            uint8_t len = 12;
-                            unsigned short total_thrust[6];
+                            uint8_t header[4] = {0xA7, 0x18, 0x0F, 12};
+                            unsigned short total_thrust[6]{};
                             uint8_t footer = 0x7A;
                         };
                         uint8_t buffer[17];
