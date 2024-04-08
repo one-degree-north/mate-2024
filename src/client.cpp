@@ -351,6 +351,26 @@ int main(int argc, char** argv) {
 
         if (controlDataChanged) communication.send({0x02, thruster_data.data[0], thruster_data.data[1], thruster_data.data[2], thruster_data.data[3], thruster_data.data[4], thruster_data.data[5], thruster_data.data[6]});
 
+        bool isConnected = glfwJoystickPresent(GLFW_JOYSTICK_1);
+        if (isConnected) {
+            int axesCount;
+            const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
+            int buttonsCount;
+            const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonsCount);
+
+            ImGui::Text("Axes: %d", axesCount);
+            for (int i = 0; i < axesCount; i++) {
+                ImGui::Text("Axis %d: %0.2f", i, axes[i]);
+            }
+
+            ImGui::Text("Buttons: %d", buttonsCount);
+            for (int i = 0; i < buttonsCount; i++) {
+                ImGui::Text("Button %d: %d", i, buttons[i]);
+            }
+        } else {
+            ImGui::Text("Joystick Not Connected");
+        }
+
         ImGui::End();
 
         ImGui::Render();
