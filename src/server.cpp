@@ -133,7 +133,7 @@ int open_feather() {
 }
 
 int main() {
-    std::thread bno_thread(bno_data_thread);
+//    std::thread bno_thread(bno_data_thread);
 
     int serial_port = open_feather();
 
@@ -191,12 +191,20 @@ int main() {
 
                     union {
                         struct {
-                            uint8_t header[4] = {0xA7, 0x18, 0x0F, 12};
+                            uint8_t header;
+                            uint8_t command;
+                            uint8_t param;
+                            uint8_t len;
                             unsigned short total_thrust[6]{};
-                            uint8_t footer = 0x7A;
+                            uint8_t footer;
                         };
                         uint8_t buffer[17];
                     } thruster_command{};
+
+                    thruster_command.header = 0xA7;
+                    thruster_command.command = 0x18;
+                    thruster_command.param = 0x0F;
+                    thruster_command.len = 12;
 
                     thruster_command.total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
                     thruster_command.total_thrust[thruster_pins[1]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
@@ -206,10 +214,19 @@ int main() {
                     thruster_command.total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    if (write(serial_port, thruster_command.buffer, 17) < 0) {
+                    thruster_command.footer = 0x7A;
+
+                    for (int i = 0; i < 17; i++)
+                        printf("%x ", thruster_command.buffer[i]);
+                    std::cout << std::endl;
+
+                    ssize_t s = write(serial_port, thruster_command.buffer, 17);
+                    if (s < 0) {
                         std::cerr << "Error: Unable to write to serial port" << std::endl;
-                        std::exit(1);
+                    } else {
+                        std::cout << "Wrote " << s << " bytes to serial port" << std::endl;
                     }
+
                     break;
                 }
                 case 0x03: { // set BNO055 calibration status
