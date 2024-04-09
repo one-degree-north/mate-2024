@@ -174,12 +174,12 @@ class MCUInterface:
         return clk_thrust
     
     def float_to_micro(self, thrust):
-        new_thrust = 1500 + 500*thrust
+        new_thrust = int(1500 + 500*thrust)
         if new_thrust > 1800:
             new_thrust = 1800
         if new_thrust < 1200:
             new_thrust = 1200
-        return new_thrust
+        return int(new_thrust)
 
     # parse data, stores data needed on opi and sends data to surface
     def _parse(self, packet):
