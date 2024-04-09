@@ -105,8 +105,8 @@ class rp2040:
         if len(data) == 12:
             pwm_vals = struct.unpack(">HHHHHH", bytes(data))
             for i in range(6):
-                self.pwms[i].duty_cycle = self.us_to_duty_cycle(pwm_vals[i])
-                # self.pwms[i].duty_cycle = pwm_vals[i]
+                # self.pwms[i].duty_cycle = self.us_to_duty_cycle(pwm_vals[i])
+                self.pwms[i].duty_cycle = pwm_vals[i]
     
     def parse_packet(self, packet):
         if packet.cmd == 0x18:
@@ -115,13 +115,19 @@ class rp2040:
     def main(self):
         # setup PWM, frequency of 50hz, 
         for i in range(6):
+            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=50, variable_frequency=False))
+            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=self.us_to_duty_cycle(2000), frequency=50, variable_frequency=False))
             # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
-            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=self.us_to_duty_cycle(2000), frequency=50, variable_frequency=False))
-            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
-        time.sleep(0.004)
-        for i in range(6):
-            self.pwms[i].duty_cycle=self.us_to_duty_cycle(1500)
+        # time.sleep(0.004)
+        # for i in range(6):
+        #     self.pwms[i].duty_cycle=self.us_to_duty_cycle(1500)
         
+        # time.sleep(0.04)
+        # for i in range(6):
+        #     self.pwms[i].duty_cycle=self.us_to_duty_cycle(1650)
+        # time.sleep(1)
+        # for i in range(6):
+        #     self.pwms[i].duty_cycle=self.us_to_duty_cycle(1500)
         # for i in range(2):
         #     self.claw_pwms.append()
 
