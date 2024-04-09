@@ -1,8 +1,8 @@
 # mcu_interface communicates with the microcontroller
 from dataclasses import dataclass
 import serial, struct, threading, time
-import RPi.GPIO as GPIO
-import pigpio
+# import RPi.GPIO as GPIO
+# import pigpio
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -76,9 +76,9 @@ class MCUInterface:
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
 
-        self.pwm = pigpio.pi()
-        self.pwm.set_mode(12, pigpio.OUTPUT)
-        self.pwm.set_PWM_frequency(12, 50)
+        # self.pwm = pigpio.pi()
+        # self.pwm.set_mode(12, pigpio.OUTPUT)
+        # self.pwm.set_PWM_frequency(12, 50)
 
         self.ser_enabled = False
         self.read_packet = Packet()
@@ -170,6 +170,14 @@ class MCUInterface:
         if clk_thrust < 2**15:
             clk_thrust = 2**15
         return clk_thrust
+    
+    def float_to_micro(self, thrust):
+        new_thrust = 1500 + 500*thrust
+        if new_thrust > 1800:
+            new_thrust = 1800
+        if new_thrust < 1200:
+            new_thrust = 1200
+        return new_thrust
 
     # parse data, stores data needed on opi and sends data to surface
     def _parse(self, packet):
@@ -226,7 +234,7 @@ class MCUInterface:
     def set_thrusters(self, thrusts):
         u16_thrusts = []
         for i in range(len(thrusts)):
-            u16_thrusts.append(self.float_to_duty_cycle(thrusts[i]))
+            u16_thrusts.append(self.float_to_micro(thrusts[i]))
         if self.debug:
             print(f"setting thrusts {thrusts}, with {u16_thrusts}")  
         self._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))

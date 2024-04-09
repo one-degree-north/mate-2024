@@ -77,9 +77,12 @@ class Packet:
 class rp2040:
     def __init__(self):
         self.read_packet = Packet()
-        # TODO: determine PWM on boards
-        self.pwm_pins = [board.D13, board.RX, board.D9, board.D5, board.MISO, board.SCL]
+        # self.pwm_pins = [board.D13, board.RX, board.D9, board.D5, board.MISO, board.SCL] # rp2040 pin
+        self.pwm_pins = [board.D5, board.D6, board.D9, board.D10, board.D11, board.D4]
+        # self.claw_pwm_pins = [board.D12, board.D13]
+
         self.pwms = []
+        # self.claw_pwms = []
         # Serial = usb_cdc.enable(console=False, data=True)
         self.serial = usb_cdc.data
         # i2c = board.I2C()
@@ -102,8 +105,8 @@ class rp2040:
         if len(data) == 12:
             pwm_vals = struct.unpack(">HHHHHH", bytes(data))
             for i in range(6):
-                # pwms[i].duty_cycle = us_to_duty_cycle(pwm_vals[i])
-                self.pwms[i].duty_cycle = pwm_vals[i]
+                self.pwms[i].duty_cycle = self.us_to_duty_cycle(pwm_vals[i])
+                # self.pwms[i].duty_cycle = pwm_vals[i]
     
     def parse_packet(self, packet):
         if packet.cmd == 0x18:
@@ -112,10 +115,16 @@ class rp2040:
     def main(self):
         # setup PWM, frequency of 50hz, 
         for i in range(6):
-            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
-        time.sleep(0.1)
+            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
+            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=self.us_to_duty_cycle(2000), frequency=50, variable_frequency=False))
+            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
+        time.sleep(0.004)
         for i in range(6):
-            self.pwms[i].duty_cycle=4369
+            self.pwms[i].duty_cycle=self.us_to_duty_cycle(1500)
+        
+        # for i in range(2):
+        #     self.claw_pwms.append()
+
         while True:
             if self.serial.in_waiting > 0:
                 new_bytes = self.serial.read()
