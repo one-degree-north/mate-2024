@@ -41,19 +41,11 @@ int main(int argc, char** argv) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
 
-
-#if defined(__APPLE__)
     const char* glsl_version = "#version 150";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#else
-    const char* glsl_version = "#version 130";
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "MATE Client", nullptr, nullptr);
     if (window == nullptr) return 1;
@@ -83,7 +75,6 @@ int main(int argc, char** argv) {
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
-
 
     int videoWidth;
     int videoHeight;

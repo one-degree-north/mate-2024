@@ -14,19 +14,14 @@ if (UNIX AND NOT APPLE)
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
 
-include_directories(
-        ${GLIB_INCLUDE_DIRS}
-        ${GSTREAMER_INCLUDE_DIRS}
-)
-
-link_directories(
-        ${GLIB_LIBRARY_DIRS}
-        ${GSTREAMER_LIBRARY_DIRS}
-)
+include_directories(${GLIB_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS})
+link_directories(${GLIB_LIBRARY_DIRS} ${GSTREAMER_LIBRARY_DIRS})
 
 if (BUILD_CLIENT)
+    add_executable(client src/client.cpp src/comms.h)
+
     add_subdirectory(lib/glfw)
     find_package(OpenGL REQUIRED)
 
@@ -36,8 +31,11 @@ if (BUILD_CLIENT)
     add_library(imgui ${IMGUI_SOURCES})
     include_directories(lib/imgui)
 
-    add_executable(client src/client.cpp src/comms.h)
-    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} glfw imgui)
+    pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
+    target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS})
+    target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
+
+    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui)
 endif()
 
 if (BUILD_SERVER)
