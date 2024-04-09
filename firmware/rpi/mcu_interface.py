@@ -329,9 +329,18 @@ class ArduinoInterface:
             print("past buffer reset")
             self.init_serial()
    
+    def float_to_micro(self, thrust):
+        micros = int(1500 + 500*thrusts)
+        if micros > 1800:
+            micros = 1800
+        if micros < 1200:
+            micros = 1200
+        return micros
+
     def set_thrusters(self, thrusts):
         u16_thrusts = []
-        # for i in range(len(thrusts)):
+        for i in range(len(thrusts)):
+            u16_thrusts.append(self.float_to_micro(thrusts[i]))
         #     u16_thrusts.append(self.float_to_duty_cycle(thrusts[i]))
         if self.debug:
             print(f"setting thrusts {thrusts}, with {u16_thrusts}")  
