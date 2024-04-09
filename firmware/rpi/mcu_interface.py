@@ -305,7 +305,7 @@ class ArduinoInterface:
             self.ser.close()
             del self.ser
         self.ser = serial.Serial(self.serial_port, 115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS, timeout=None, write_timeout=0.5)
-        self.ser.dtr = True
+        # self.ser.dtr = True
 
     def start(self):
         self.ser_enabled = True
