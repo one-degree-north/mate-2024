@@ -171,7 +171,7 @@ class MCUInterface:
             clk_thrust = 2**16-1
         if clk_thrust < 2**15:
             clk_thrust = 2**15
-        return clk_thrust
+        return int(clk_thrust/10)
     
     def float_to_micro(self, thrust):
         new_thrust = int(1500 + 500*thrust)
