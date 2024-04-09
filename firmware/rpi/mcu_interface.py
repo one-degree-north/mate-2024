@@ -330,7 +330,7 @@ class ArduinoInterface:
             self.init_serial()
    
     def float_to_micro(self, thrust):
-        micros = int(1500 + 500*thrusts)
+        micros = int(1500 + 500*thrust)
         if micros > 1800:
             micros = 1800
         if micros < 1200:
