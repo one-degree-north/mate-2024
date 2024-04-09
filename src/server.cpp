@@ -176,13 +176,8 @@ int main() {
                     std::cout << "Received " << n << "bytes" << std::endl;
                     if (n != 25) goto invalid;
 
-                    auto double_to_duty_cycle = [](double x) {
-                        return std::clamp(
-                                (uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0),
-                                (uint16_t) (1 << 15),
-                                (uint16_t) ((1 << 16) - 1)
-                        );
-                    };
+//                    #define DOUBLE_TO_CYCLE(x) std::clamp((uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0), (uint16_t) (1 << 15), (uint16_t) ((1 << 16) - 1));
+                    #define DOUBLE_TO_MS(x) std::clamp((uint16_t) (1500 + 250 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
 
                     union {
                         struct {float forward, side, up, pitch, yaw, roll;};
@@ -193,28 +188,27 @@ int main() {
 
                     union {
                         struct {
-                            uint8_t header[4]{};
-                            unsigned short total_thrust[6]{};
-                            uint8_t footer{};
+                            uint8_t cmd_byte;
+                            unsigned short total_thrust[6];
                         };
-                        uint8_t buffer[17];
-                    } thruster_command{.header = {0xA7, 0x18, 0x0F, 12}, .footer = 0x7A};
+                        uint8_t buffer[13];
+                    } thruster_command {.cmd_byte = 0x69};
 
-                    thruster_command.total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[1]] = double_to_duty_cycle( (thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[2]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[3]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
-                    thruster_command.total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[0]] = DOUBLE_TO_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[1]] = DOUBLE_TO_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[2]] = DOUBLE_TO_MS((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[3]] = DOUBLE_TO_MS((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[4]] = DOUBLE_TO_MS((thruster_info.up - thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[5]] = DOUBLE_TO_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    for (int i = 4; i < 16; i += 2)
-                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
+//                    for (int i = 0; i < 12; i += 2)
+//                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
 
-                    for (int i = 0; i < 17; i++)
+                    for (int i = 0; i < 13; i++)
                         printf("%x ", thruster_command.buffer[i]);
                     std::cout << std::endl;
 
-                    ssize_t s = write(serial_port, thruster_command.buffer, 17);
+                    ssize_t s = write(serial_port, thruster_command.buffer, 13);
                     if (s < 0) {
                         std::cerr << "Error: Unable to write to serial port" << std::endl;
                     } else {
