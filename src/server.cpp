@@ -9,6 +9,7 @@ extern "C" {
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <algorithm>
 #include <termios.h>
 
 #include <sys/ioctl.h>
@@ -172,49 +173,42 @@ int main() {
                     break;
                 }
                 case 0x02: { // set thruster info
-                    if (n != 8) goto invalid;
+                    std::cout << "Received " << n << "bytes" << std::endl;
+                    if (n != 25) goto invalid;
 
                     auto double_to_duty_cycle = [](double x) {
-                        unsigned short clock_thrust = (int) (3 * (1 << 14) + x * (((1 << 16) - 1) - (1 << 15)) / 2.0);
-                        if (clock_thrust > (1 << 16) - 1) clock_thrust = (1 << 16) - 1;
-                        if (clock_thrust < (1 << 15)) clock_thrust = (1 << 15);
-                        return clock_thrust;
+                        return std::clamp(
+                                (uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0),
+                                (uint16_t) (1 << 15),
+                                (uint16_t) ((1 << 16) - 1)
+                        );
                     };
 
                     union {
-                        struct {int8_t forward, side, up, pitch, yaw, roll;};
-                        uint8_t buffer[6];
+                        struct {float forward, side, up, pitch, yaw, roll;};
+                        uint8_t buffer[25];
                     } thruster_info{};
                     std::copy(buffer.begin() + 1, buffer.begin() + 7, thruster_info.buffer);
-
                     const int thruster_pins[] = {5, 1, 2, 4, 0, 3};
 
                     union {
                         struct {
-                            uint8_t header;
-                            uint8_t command;
-                            uint8_t param;
-                            uint8_t len;
+                            uint8_t header[4]{};
                             unsigned short total_thrust[6]{};
-                            uint8_t footer;
+                            uint8_t footer{};
                         };
                         uint8_t buffer[17];
-                    } thruster_command{};
-
-                    thruster_command.header = 0xA7;
-                    thruster_command.command = 0x18;
-                    thruster_command.param = 0x0F;
-                    thruster_command.len = 12;
+                    } thruster_command{.header = {0xA7, 0x18, 0x0F, 12}, .footer = 0x7A};
 
                     thruster_command.total_thrust[thruster_pins[0]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[1]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[1]] = double_to_duty_cycle( (thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
                     thruster_command.total_thrust[thruster_pins[2]] = double_to_duty_cycle((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
                     thruster_command.total_thrust[thruster_pins[3]] = double_to_duty_cycle((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
-
                     thruster_command.total_thrust[thruster_pins[4]] = double_to_duty_cycle((thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.total_thrust[thruster_pins[5]] = double_to_duty_cycle((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    thruster_command.footer = 0x7A;
+                    for (int i = 4; i < 16; i += 2)
+                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
 
                     for (int i = 0; i < 17; i++)
                         printf("%x ", thruster_command.buffer[i]);
@@ -237,6 +231,14 @@ int main() {
                     bno_mutex.lock();
                     isConfiguringBNO = buffer[1] == 0;
                     bno_mutex.unlock();
+
+                    break;
+                }
+                case 0x04: {
+                    if (n != 1) goto invalid;
+
+                    const uint8_t cmd[] = {0x01};
+                    if (write(serial_port, cmd, 1) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;
                 }
