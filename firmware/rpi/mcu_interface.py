@@ -132,7 +132,7 @@ class MCUInterface:
     def _write_packet(self, cmd:int, param:int, data): #WRITE IS BIG ENDIAN!!!!
         try:
             # self.ser.reset_input_buffer()
-            out: bytes = struct.pack(">BBBB", HEADER, cmd, param, len(data)) + data + struct.pack(">B", FOOTER)
+            out: bytes = struct.pack("<BBBB", HEADER, cmd, param, len(data)) + data + struct.pack("<B", FOOTER)
             print(out.hex(" "))
             self.ser.write(out)
             self.ser.reset_output_buffer()
