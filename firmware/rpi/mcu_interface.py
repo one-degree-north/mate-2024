@@ -262,52 +262,133 @@ class MCUInterface:
     def funny(self):
         self.ser.write(bytes([0x04]))
 
+class ArduinoInterface:
+    def __init__(self, serial_port="/dev/ttyACM0", stop_event=None, use_stop_event=False, debug=False, write_delay=0.05, bno_data=None, data_lock=None):
+        self.serial_port = serial_port
+        # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
+        self.init_serial()
+
+        # self.pwm = pigpio.pi()
+        # self.pwm.set_mode(12, pigpio.OUTPUT)
+        # self.pwm.set_PWM_frequency(12, 50)
+
+        self.ser_enabled = False
+        self.read_packet = Packet()
+        self.server = None
+        self.write_delay=write_delay
+
+        self.stop_event = stop_event
+        self.debug=debug
+        self.use_stop_event=use_stop_event
+
+        # self.bno_data = bno_data
+        # self.data_lock = data_lock
+
+        # self.claw_pwm = GPIO.PWM(12, 500)
+        # self.claw_pwm.start(0.6)
+
+    # def move_claw(self, open):
+    #     if open:
+    #         self.pwm.set_servo_pulsewidth(12, 1700)
+    #     else:
+    #         self.pwm.set_servo_pulsewidth(12, 1200)
+        # deg 
+        # dc = deg*(0.25/360)+0.75
+        # if dc > 1:
+        #     dc = 1
+        # if dc < 0.2:
+        #     dc = 0.2
+        # self.claw_pwm.ChangeDutyCycle(dc)
+
+    def init_serial(self):
+        if 'ser' in dir(self):
+            self.ser.close()
+            del self.ser
+        self.ser = serial.Serial(self.serial_port, 115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS, timeout=None, write_timeout=0.5)
+        self.ser.dtr = True
+
+    def start(self):
+        self.ser_enabled = True
+        if not self.ser.is_open:
+            self.ser.open()
+
+    # def end_pwm(self):
+    #     self.claw_pwm.stop()
+        # GPIO.cleanup()
+
+    def _write_packet(self, cmd:int, data): #WRITE IS BIG ENDIAN!!!!
+        try:
+            # self.ser.reset_input_buffer()
+            out: bytes = struct.pack("<B", cmd) + data
+            print(out.hex(" "))
+            self.ser.write(out)
+            self.ser.reset_output_buffer()
+        except serial.SerialTimeoutException:
+            print("err")
+            self.ser.reset_output_buffer()
+            print("past buffer reset")
+            self.init_serial()
+   
+    def set_thrusters(self, thrusts):
+        u16_thrusts = []
+        # for i in range(len(thrusts)):
+        #     u16_thrusts.append(self.float_to_duty_cycle(thrusts[i]))
+        if self.debug:
+            print(f"setting thrusts {thrusts}, with {u16_thrusts}")  
+        self._write_packet(0x69, struct.pack("<HHHHHH", *u16_thrusts))
+        if self.debug:
+            print("finished writing")
+
+    def set_servos(self, vals):
+        print(f"setting thrusts {thrusts}")
+        self._write_packet(0x28, 0x2F, struct.pack(">HH", *vals))
+
 if __name__ == "__main__":
-    bno_data = {
-        "accel":[0, 0, 0],
-        "gyro":[0, 0, 0],
-        "eul":[0, 0, 0],
-        "lin":[0, 0, 0],
-        "quat":[0, 0, 0, 0]
-    }
-    data_lock=threading.Lock()
-    interface = MCUInterface("/dev/ttyACM0", debug=True, bno_data=bno_data,data_lock=data_lock)
-    interface.start()
+    interface = ArduinoInterface("/dev/ttyACM0", debug=True)
     while True:
         val = input("input type > ")
-        if val == "a":
-            interface.funny()
         if val == "all":
             t = float(input("thrust: "))
             thrusts = [t, t, t, t, t, t]
             interface.set_thrusters(thrusts)
-        if val == "st":
-            thruster = int(input("thruster: "))
-            microseconds = float(input("microseconds: "))
-            thrusts = [0, 0, 0, 0, 0, 0]
-            thrusts[thruster] = microseconds
-            interface.set_thrusters(thrusts)
-        if val == "sv":
-            servo1 = int(input("servo 1: "))
-            servo2 = int(input("servo 2: "))
-            vals = [servo1, servo2]
-            interface.set_servos(vals)
-        if val == "bruh":
-            interface.test_connection()
-        if val == "echo":
-            interface.echo(input("> "))
-        if val == "thrust":
-            interface.get_thrusters()
-        if val == "servos":
-            interface.get_servos()
-        if val == 'b':
-            u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
-            interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
-        # if val == "claw":
-        #     oc = input("claw o/c")
-        #     interface.move_claw(True if oc == 'o' else False)
-        # if val == "dclaw":
-        #     interface.end_pwm()
+    # data_lock=threading.Lock()
+    # interface = MCUInterface("/dev/ttyACM0", debug=True, bno_data=bno_data,data_lock=data_lock)
+    # interface.start()
+    # while True:
+    #     val = input("input type > ")
+    #     if val == "a":
+    #         interface.funny()
+    #     if val == "all":
+    #         t = float(input("thrust: "))
+    #         thrusts = [t, t, t, t, t, t]
+    #         interface.set_thrusters(thrusts)
+    #     if val == "st":
+    #         thruster = int(input("thruster: "))
+    #         microseconds = float(input("microseconds: "))
+    #         thrusts = [0, 0, 0, 0, 0, 0]
+    #         thrusts[thruster] = microseconds
+    #         interface.set_thrusters(thrusts)
+    #     if val == "sv":
+    #         servo1 = int(input("servo 1: "))
+    #         servo2 = int(input("servo 2: "))
+    #         vals = [servo1, servo2]
+    #         interface.set_servos(vals)
+    #     if val == "bruh":
+    #         interface.test_connection()
+    #     if val == "echo":
+    #         interface.echo(input("> "))
+    #     if val == "thrust":
+    #         interface.get_thrusters()
+    #     if val == "servos":
+    #         interface.get_servos()
+    #     if val == 'b':
+    #         u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
+    #         interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
+    #     # if val == "claw":
+    #     #     oc = input("claw o/c")
+    #     #     interface.move_claw(True if oc == 'o' else False)
+    #     # if val == "dclaw":
+    #     #     interface.end_pwm()
 
     
             
