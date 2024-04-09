@@ -239,7 +239,7 @@ class MCUInterface:
             u16_thrusts.append(self.float_to_duty_cycle(thrusts[i]))
         if self.debug:
             print(f"setting thrusts {thrusts}, with {u16_thrusts}")  
-        self._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
+        self._write_packet(0x18, 0x0F, struct.pack("<HHHHHH", *u16_thrusts))
         if self.debug:
             print("finished writing")
 

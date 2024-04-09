@@ -113,29 +113,41 @@ class rp2040:
             self.update_pwm(packet.data)
 
     def main(self):
+        # pwm_a = pwmio.PWMOut(self.pwm_pins[5], duty_cycle=2**14, frequency=50, variable_frequency=False)
+        # while True:
+        #     time.sleep(1)
+
+
         # setup PWM, frequency of 50hz, 
         for i in range(6):
-            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=4915, frequency=50, variable_frequency=False))
+            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=4915, frequency=50, variable_frequency=False))
             # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=self.us_to_duty_cycle(2000), frequency=50, variable_frequency=False))
-            self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
-        time.sleep(0.004)
+            # self.pwms.append(pwmio.PWMOut(self.pwm_pins[i], duty_cycle=2**14*3, frequency=500, variable_frequency=False))
+        time.sleep(0.04)
         for i in range(6):
-            self.pwms[i].duty_cycle=2**14*3
+            self.pwms[i].duty_cycle=6553
         
         time.sleep(0.04)
         for i in range(6):
-            self.pwms[i].duty_cycle=49152
+            self.pwms[i].duty_cycle=4915
         
-
+        time.sleep(0.04)
+        for i in range(6):
+            self.pwms[i].duty_cycle=6553
+        
+        while True:
+            time.sleep(1)
         # time.sleep(1)
         # for i in range(6):
-        #     self.pwms[i].duty_cycle=5570
+        #     self.pwms[i].duty_cycle=55705
         
         # time.sleep(1)
         # for i in range(6):
-        #     self.pwms[i].duty_cycle=4915
+        #     self.pwms[i].duty_cycle=49152
         # for i in range(2):
         #     self.claw_pwms.append()
+        # while True:
+        #     time.sleep(1)
 
         while True:
             if self.serial.in_waiting > 0:
