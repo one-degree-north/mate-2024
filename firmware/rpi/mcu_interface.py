@@ -96,11 +96,11 @@ class MCUInterface:
         # self.claw_pwm = GPIO.PWM(12, 500)
         # self.claw_pwm.start(0.6)
 
-    def move_claw(self, open):
-        if open:
-            self.pwm.set_servo_pulsewidth(12, 1700)
-        else:
-            self.pwm.set_servo_pulsewidth(12, 1200)
+    # def move_claw(self, open):
+    #     if open:
+    #         self.pwm.set_servo_pulsewidth(12, 1700)
+    #     else:
+    #         self.pwm.set_servo_pulsewidth(12, 1200)
         # deg 
         # dc = deg*(0.25/360)+0.75
         # if dc > 1:
@@ -125,9 +125,9 @@ class MCUInterface:
             self.ser.open()
         self.read_thread.start()
 
-    def end_pwm(self):
-        self.claw_pwm.stop()
-        GPIO.cleanup()
+    # def end_pwm(self):
+    #     self.claw_pwm.stop()
+        # GPIO.cleanup()
 
     def _write_packet(self, cmd:int, param:int, data): #WRITE IS BIG ENDIAN!!!!
         try:
@@ -188,7 +188,7 @@ class MCUInterface:
             print(f"received data: {packet.to_bytes}")
             print(f"received packet cmd: {packet.cmd}, len: {packet.len}, bytes: {packet.to_bytes()}")
             if packet.cmd == 0x1A:
-                curr_thrusters = struct.unpack("<HHHHHHHH", bytes(packet.data))
+                curr_thrusters = struct.unpack("<HHHHHH", bytes(packet.data))
                 print(f"thrusts: {curr_thrusters}")
             if packet.cmd == 0x2A:
                 curr_servos = struct.unpack("<HH", bytes(packet.data))
@@ -303,11 +303,11 @@ if __name__ == "__main__":
         if val == 'b':
             u16_thrusts = [51256, 49152, 49152, 49152, 49152, 49152]
             interface._write_packet(0x18, 0x0F, struct.pack(">HHHHHH", *u16_thrusts))
-        if val == "claw":
-            oc = input("claw o/c")
-            interface.move_claw(True if oc == 'o' else False)
-        if val == "dclaw":
-            interface.end_pwm()
+        # if val == "claw":
+        #     oc = input("claw o/c")
+        #     interface.move_claw(True if oc == 'o' else False)
+        # if val == "dclaw":
+        #     interface.end_pwm()
 
     
             
