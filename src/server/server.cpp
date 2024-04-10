@@ -134,21 +134,21 @@ int open_feather() {
 }
 
 int main() {
-//    std::thread bno_thread(bno_data_thread);
+    std::thread bno_thread(bno_data_thread);
 
-    int serial_port = open_feather();
+//    int serial_port = open_feather();
 
     gst_init(NULL, NULL);
 
-    std::string gst_pipeline = " ! rtpjpegpay ! udpsink port=6970 host=" + client_address;
-    int video_stream = open("/dev/video0", O_RDONLY);
-    if (video_stream < 0) {
-        std::cerr << "Error: Unable to open video stream. Using test stream." << std::endl;
-        gst_pipeline = "videotestsrc ! jpegenc " + gst_pipeline;
-    } else {
-        gst_pipeline = "v4l2src device=/dev/video0" + gst_pipeline;
-        close(video_stream);
-    }
+    std::string gst_pipeline = "v4l2src device=/dev/video0 ! rtpjpegpay ! udpsink port=6970 host=" + client_address;
+//    int video_stream = open("/dev/video0", O_RDONLY);
+//    if (video_stream < 0) {
+//        std::cerr << "Error: Unable to open video stream. Using test stream." << std::endl;
+//        gst_pipeline = "videotestsrc ! jpegenc " + gst_pipeline;
+//    } else {
+//        gst_pipeline = "v4l2src device=/dev/video0" + gst_pipeline;
+//        close(video_stream);
+//    }
 
     std::cout << "Using pipeline: " << gst_pipeline << std::endl;
     GError *error = nullptr;
@@ -208,12 +208,12 @@ int main() {
                         printf("%x ", thruster_command.buffer[i]);
                     std::cout << std::endl;
 
-                    ssize_t s = write(serial_port, thruster_command.buffer, 13);
-                    if (s < 0) {
-                        std::cerr << "Error: Unable to write to serial port" << std::endl;
-                    } else {
-                        std::cout << "Wrote " << s << " bytes to serial port" << std::endl;
-                    }
+//                    ssize_t s = write(serial_port, thruster_command.buffer, 13);
+//                    if (s < 0) {
+//                        std::cerr << "Error: Unable to write to serial port" << std::endl;
+//                    } else {
+//                        std::cout << "Wrote " << s << " bytes to serial port" << std::endl;
+//                    }
 
                     break;
                 }
@@ -232,7 +232,7 @@ int main() {
                     if (n != 1) goto invalid;
 
                     const uint8_t cmd[] = {0x01};
-                    if (write(serial_port, cmd, 1) < 0) std::cout << "Failed to write to claw" << std::endl;
+//                    if (write(serial_port, cmd, 1) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;
                 }

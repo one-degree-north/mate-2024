@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(mate)
+project(mate LANGUAGES CXX Swift)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -20,7 +20,7 @@ include_directories(${GLIB_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS})
 link_directories(${GLIB_LIBRARY_DIRS} ${GSTREAMER_LIBRARY_DIRS})
 
 if (BUILD_CLIENT)
-    add_executable(client src/client.cpp src/comms.h)
+    add_executable(client src/client/client.cpp)
 
     add_subdirectory(lib/glfw)
     find_package(OpenGL REQUIRED)
@@ -31,15 +31,18 @@ if (BUILD_CLIENT)
     add_library(imgui ${IMGUI_SOURCES})
     include_directories(lib/imgui)
 
-    pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
-    target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS})
-    target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
+    add_library(photogrammetry src/client/photogrammetry.swift)
+#    target_compile_options(photogrammetry PRIVATE -cxx-interoperability-mode=default)
 
-    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui)
+    pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
+    target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS} src)
+    target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
+    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry)
 endif()
 
 if (BUILD_SERVER)
-    add_executable(server src/server.cpp src/comms.h)
+    add_executable(server src/server/server.cpp)
+    target_include_directories(server PRIVATE src)
     target_link_libraries(server PRIVATE ${GSTREAMER_LIBRARIES} i2c)
 endif()
 
