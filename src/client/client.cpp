@@ -12,6 +12,7 @@
 
 #include "comms.h"
 #include "font.h"
+#include "imgui_internal.h"
 
 #include <GLFW/glfw3.h>
 
@@ -84,8 +85,6 @@ int main(int argc, char** argv) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-
     gst_init(&argc, &argv);
     GError *err = nullptr;
     if (!std::filesystem::exists("images")) std::filesystem::create_directory("images");
@@ -148,6 +147,8 @@ int main(int argc, char** argv) {
     float xAxis = 0;
     float yAxis = 0;
 
+    bool dockspaceInitialised = false;
+
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -179,12 +180,56 @@ int main(int argc, char** argv) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::DockSpaceOverViewport();
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
 
+        ImGuiWindowFlags host_window_flags = 0;
+        host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+        host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("DockSpace", NULL, host_window_flags);
+        ImGui::PopStyleVar(3);
+
+        ImGuiID dockspace_id = ImGui::GetID("DockSpace");
+        if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr) {
+            ImGui::DockBuilderRemoveNode(dockspace_id);
+            ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+            ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+
+            ImGuiID dock_main_id = dockspace_id;
+            ImGuiID camera_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.6f, nullptr, &dock_main_id);
+            ImGuiID thruster_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+            ImGuiID reconstruction_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+
+            ImGui::DockBuilderDockWindow("Camera Stream", camera_space);
+            ImGui::DockBuilderDockWindow("Thruster Control", thruster_space);
+            ImGui::DockBuilderDockWindow("Reconstruction", reconstruction_space);
+            ImGui::DockBuilderDockWindow("Sensor Data", dock_main_id);
+
+
+            ImGui::DockBuilderFinish(dockspace_id);
+        }
+
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), 0, nullptr);
+        ImGui::End();
+
+
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(100, 500), ImGuiCond_Once);
         ImGui::ShowMetricsWindow();
 
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
         ImGui::ShowDemoWindow();
+        ImGui::SetWindowPos("Dear ImGui Demo", ImVec2(100, 530), ImGuiCond_Once);
 
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(100, 560), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(150, 70), ImGuiCond_FirstUseEver);
         ImGui::Begin("Ping");
         if (ImGui::Button("Ping")) {
             communication.send({0x01});
