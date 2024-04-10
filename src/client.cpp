@@ -355,7 +355,7 @@ int main(int argc, char** argv) {
                 const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
 
                 float currXAxis = axes[0], currYAxis = axes[1] * -1;
-                float mag = sqrtf(powf(currXAxis, 2) + powf(currYAxis, 2));
+                float mag = std::sqrtf(std::powf(currXAxis, 2) + std::powf(currYAxis, 2));
                 currXAxis = currXAxis / mag;
                 currYAxis = currYAxis / mag;
 
