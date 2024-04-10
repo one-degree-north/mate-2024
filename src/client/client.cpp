@@ -147,8 +147,6 @@ int main(int argc, char** argv) {
     float xAxis = 0;
     float yAxis = 0;
 
-    bool dockspaceInitialised = false;
-
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -225,7 +223,6 @@ int main(int argc, char** argv) {
 
         ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
         ImGui::ShowDemoWindow();
-        ImGui::SetWindowPos("Dear ImGui Demo", ImVec2(100, 530), ImGuiCond_Once);
 
         ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(100, 560), ImGuiCond_FirstUseEver);
