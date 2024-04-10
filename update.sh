@@ -1,5 +1,3 @@
-#!/bin/bash
-
 rm -rf build
 git stash
 git pull
