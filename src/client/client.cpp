@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     style.FrameRounding = 2;
     style.GrabRounding = 2;
     style.TabRounding = 4;
-    
+
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
