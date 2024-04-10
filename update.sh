@@ -8,10 +8,10 @@ case $resp in
         mkdir build
         cd build
         cmake ..
-        make server
+        make server ;;
     c )
         cmake -B build -G Ninja .
         cd build
-	ninja client
-    * ) echo "Invalid response.";;
+	ninja client ;;
+    * ) echo "Invalid response." ;;
 esac
