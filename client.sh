@@ -4,6 +4,4 @@ git pull
 mkdir build
 cd build
 cmake ..
-read -p "server/client: " resp
-make ./$resp
-mv build/$resp .
+make client
