@@ -42,7 +42,7 @@ if (BUILD_CLIENT)
 endif()
 
 if (BUILD_SERVER)
-    add_executable(src/server/server.cpp)
+    add_executable(server src/server/server.cpp)
     target_include_directories(server PRIVATE src)
     target_link_libraries(server PRIVATE ${GSTREAMER_LIBRARIES} i2c)
 endif()
