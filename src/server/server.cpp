@@ -188,12 +188,15 @@ int main() {
                     const int thruster_pins[] = {5, 1, 2, 4, 0, 3};
 
                     union {
+                        #pragma pack(push, 1)
                         struct {
                             uint8_t cmd_byte;
                             unsigned short total_thrust[6];
-                        };
+                        } data;
+                        #pragma pack(pop)
+
                         uint8_t buffer[13];
-                    } thruster_command {.cmd_byte = 0x69};
+                    } thruster_command {.data = {.cmd_byte = 0x69}};
 
 //                    thruster_command.total_thrust[thruster_pins[0]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
 //                    thruster_command.total_thrust[thruster_pins[1]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
@@ -202,12 +205,12 @@ int main() {
 //                    thruster_command.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
 //                    thruster_command.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    thruster_command.total_thrust[thruster_pins[0]] = 1600;
-                    thruster_command.total_thrust[thruster_pins[1]] = 1600;
-                    thruster_command.total_thrust[thruster_pins[2]] = 1600;
-                    thruster_command.total_thrust[thruster_pins[3]] = 1600;
-                    thruster_command.total_thrust[thruster_pins[4]] = 1600;
-                    thruster_command.total_thrust[thruster_pins[5]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[0]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[1]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[2]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[3]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[4]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[5]] = 1600;
 
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
