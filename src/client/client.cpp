@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
         if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thrusterData.speed = 4;
 
         thrusterData.speed = std::clamp(thrusterData.speed, 0.0f, 10.0f);
-        ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 10, "%.2f");
+        if (ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 10, "%.2f")) controlDataChanged = true;
 
         if (ImGui::SliderFloat("Claw 0", &claw0, -1, 1, "%.2f")) {
             auto buf = (uint8_t*) &claw0;
