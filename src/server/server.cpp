@@ -122,7 +122,7 @@ int open_feather() {
     tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
     tty.c_cc[VMIN] = 0;
 
-    cfsetspeed(&tty, B9600); // Set baud rate
+    cfsetspeed(&tty, B115200); // Set baud rate
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
@@ -205,12 +205,12 @@ int main() {
 //                    thruster_command.data.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
 //                    thruster_command.data.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    thruster_command.data.total_thrust[thruster_pins[0]] = 1600;
-                    thruster_command.data.total_thrust[thruster_pins[1]] = 1600;
-                    thruster_command.data.total_thrust[thruster_pins[2]] = 1600;
-                    thruster_command.data.total_thrust[thruster_pins[3]] = 1600;
-                    thruster_command.data.total_thrust[thruster_pins[4]] = 1600;
-                    thruster_command.data.total_thrust[thruster_pins[5]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[0]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[1]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[2]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[3]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[4]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[5]] = 1550;
 
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
