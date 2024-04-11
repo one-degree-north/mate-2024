@@ -69,7 +69,6 @@ int main(int argc, char** argv) {
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO(); (void) io;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-//    ImGui::StyleColorsDark();
 
     ImFontConfig config;
     config.OversampleH = 3;
@@ -90,10 +89,10 @@ int main(int argc, char** argv) {
     gst_init(&argc, &argv);
     GError *err = nullptr;
     if (!std::filesystem::exists("images")) std::filesystem::create_directory("images");
-    pipeline = gst_parse_launch(
-    "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! tee name=t "
-        "t. ! queue ! jpegdec ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink "
-        "t. ! queue ! valve name=image-valve drop=true ! videorate skip-to-first=true ! capsfilter name=image-rate-filter caps=image/jpeg,framerate=2/1 ! multifilesink name=image-sink location=images/image%d.jpeg async=false", //
+    static GstElement* pipeline = gst_parse_launch(
+    "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
+        "t. ! queue ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink "
+        "t. ! queue ! valve name=image-valve drop=true ! videorate skip-to-first=true ! capsfilter name=image-rate-filter caps=video/x-raw,framerate=2/1 ! videocrop name=image-crop bottom=0 ! jpegenc ! multifilesink name=image-sink location=images/image%d.jpeg async=false", //
     &err);
     if (err) {
         std::cerr << "Failed to create pipeline: " << err->message << std::endl;
@@ -105,6 +104,7 @@ int main(int argc, char** argv) {
 
     GstElement* imageValve = gst_bin_get_by_name(GST_BIN(pipeline), "image-valve");
     GstElement* imageRateFilter = gst_bin_get_by_name(GST_BIN(pipeline), "image-rate-filter");
+    GstElement* imageCrop = gst_bin_get_by_name(GST_BIN(pipeline), "image-crop");
     GstElement* imageSink = gst_bin_get_by_name(GST_BIN(pipeline), "image-sink");
     GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "gui-sink");
     if (!sink) {
@@ -488,9 +488,14 @@ int main(int argc, char** argv) {
         ImGui::Begin("Reconstruction");
 
         if (ImGui::SliderInt("Recording Frame Rate", &imageFrameRate, 1, 30)) {
-            GstCaps* caps = gst_caps_new_simple("image/jpeg", "framerate", GST_TYPE_FRACTION, imageFrameRate, 1, nullptr);
+            GstCaps* caps = gst_caps_new_simple("video/x-raw", "framerate", GST_TYPE_FRACTION, imageFrameRate, 1, nullptr);
             g_object_set(imageRateFilter, "caps", caps, nullptr);
             gst_caps_unref(caps);
+        }
+
+        static int cropBottom = 0;
+        if (ImGui::SliderInt("Bottom Crop Pixels", &cropBottom, 0, 500)) {
+            g_object_set(imageCrop, "bottom", cropBottom, nullptr);
         }
 
         if (!imageRecording && ImGui::Button("Start Recording")) {
