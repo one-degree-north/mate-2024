@@ -178,7 +178,7 @@ int main() {
                     if (n != 25) goto invalid;
 
 //                    #define DOUBLE_TO_CYCLE(x) std::clamp((uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0), (uint16_t) (1 << 15), (uint16_t) ((1 << 16) - 1));
-                    #define DOUBLE_TO_THRUSTER_MS(x) std::clamp((uint16_t) (1500 + 250 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
+                    #define DOUBLE_TO_THRUSTER_MS(x) std::clamp((uint16_t) (1000 + 500 * x), (uint16_t) 1000, (uint16_t) 2000)
 
                     union {
                         struct {float forward, side, up, pitch, yaw, roll;};
