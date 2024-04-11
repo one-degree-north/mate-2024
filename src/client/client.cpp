@@ -1,6 +1,7 @@
 #include <iostream>
 #include <functional>
 #include <filesystem>
+#include <format>
 #include <cmath>
 
 #include <gst/gst.h>
@@ -73,7 +74,8 @@ int main(int argc, char** argv) {
     ImFontConfig config;
     config.OversampleH = 3;
     config.OversampleV = 3;
-    io.Fonts->AddFontFromMemoryCompressedTTF(font_compressed_data, font_compressed_size, 14.0f, &config);
+    io.FontGlobalScale = 0.5f;
+    io.Fonts->AddFontFromMemoryCompressedTTF(font_compressed_data, font_compressed_size, 28.0f, &config);
 
     ImGuiStyle &style = ImGui::GetStyle();
     style.WindowRounding = 4;
@@ -139,7 +141,8 @@ int main(int argc, char** argv) {
     union {
         struct { float front, side, up, pitch, roll, yaw, speed; };
         uint8_t data[24] {};
-    } thruster_data {};
+    } thrusterData {};
+    float claw0 = 0, claw1 = 0;
 
     std::vector<uint8_t> buffer;
 
@@ -405,18 +408,18 @@ int main(int argc, char** argv) {
                 }
             };
 
-            bindThrusterKey(ImGuiKey_W, thruster_data.speed, thruster_data.front);
-            bindThrusterKey(ImGuiKey_S, -thruster_data.speed, thruster_data.front);
-            bindThrusterKey(ImGuiKey_A, -thruster_data.speed, thruster_data.side);
-            bindThrusterKey(ImGuiKey_D, thruster_data.speed, thruster_data.side);
-            bindThrusterKey(ImGuiKey_Space, thruster_data.speed, thruster_data.up);
-            bindThrusterKey(ImGuiKey_LeftShift, -thruster_data.speed, thruster_data.up);
-            bindThrusterKey(ImGuiKey_O, thruster_data.speed, thruster_data.pitch);
-            bindThrusterKey(ImGuiKey_U, -thruster_data.speed, thruster_data.pitch);
-            bindThrusterKey(ImGuiKey_J, -thruster_data.speed, thruster_data.roll);
-            bindThrusterKey(ImGuiKey_L, thruster_data.speed, thruster_data.roll);
-            bindThrusterKey(ImGuiKey_Q, -thruster_data.speed, thruster_data.yaw);
-            bindThrusterKey(ImGuiKey_E, thruster_data.speed, thruster_data.yaw);
+            bindThrusterKey(ImGuiKey_W, thrusterData.speed, thrusterData.front);
+            bindThrusterKey(ImGuiKey_S, -thrusterData.speed, thrusterData.front);
+            bindThrusterKey(ImGuiKey_A, -thrusterData.speed, thrusterData.side);
+            bindThrusterKey(ImGuiKey_D, thrusterData.speed, thrusterData.side);
+            bindThrusterKey(ImGuiKey_Space, thrusterData.speed, thrusterData.up);
+            bindThrusterKey(ImGuiKey_LeftShift, -thrusterData.speed, thrusterData.up);
+            bindThrusterKey(ImGuiKey_O, thrusterData.speed, thrusterData.pitch);
+            bindThrusterKey(ImGuiKey_U, -thrusterData.speed, thrusterData.pitch);
+            bindThrusterKey(ImGuiKey_J, -thrusterData.speed, thrusterData.roll);
+            bindThrusterKey(ImGuiKey_L, thrusterData.speed, thrusterData.roll);
+            bindThrusterKey(ImGuiKey_Q, -thrusterData.speed, thrusterData.yaw);
+            bindThrusterKey(ImGuiKey_E, thrusterData.speed, thrusterData.yaw);
         } else {
             bool isConnected = glfwJoystickPresent(GLFW_JOYSTICK_1);
             if (isConnected) {
@@ -435,13 +438,13 @@ int main(int argc, char** argv) {
                 if (xAxis != currXAxis) {
                     xAxis = currXAxis;
                     controlDataChanged = true;
-                    thruster_data.front = (thruster_data.speed * xAxis);
+                    thrusterData.front = (thrusterData.speed * xAxis);
                 }
 
                 if (yAxis != currYAxis) {
                     yAxis = currYAxis;
                     controlDataChanged = true;
-                    thruster_data.side = (thruster_data.speed * yAxis);
+                    thrusterData.side = (thrusterData.speed * yAxis);
                 }
             } else {
                 ImGui::Text("Joystick Not Connected");
@@ -451,7 +454,7 @@ int main(int argc, char** argv) {
         if (controlDataChanged) {
             std::vector<uint8_t> thruster_buf(25);
             thruster_buf[0] = 0x02;
-            std::copy(thruster_data.data, thruster_data.data + 24, thruster_buf.begin() + 1);
+            std::copy(thrusterData.data, thrusterData.data + 24, thruster_buf.begin() + 1);
 
             communication.send(thruster_buf);
         };
@@ -460,17 +463,25 @@ int main(int argc, char** argv) {
             communication.send({0x04});
         }
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thruster_data.speed++;
-        if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thruster_data.speed--;
-        if (ImGui::IsKeyPressed(ImGuiKey_0, false)) thruster_data.speed = 0;
-        if (ImGui::IsKeyPressed(ImGuiKey_1, false)) thruster_data.speed = 1;
-        if (ImGui::IsKeyPressed(ImGuiKey_2, false)) thruster_data.speed = 2;
-        if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thruster_data.speed = 3;
-        if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thruster_data.speed = 4;
+        if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thrusterData.speed++;
+        if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thrusterData.speed--;
+        if (ImGui::IsKeyPressed(ImGuiKey_0, false)) thrusterData.speed = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_1, false)) thrusterData.speed = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_2, false)) thrusterData.speed = 2;
+        if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thrusterData.speed = 3;
+        if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thrusterData.speed = 4;
 
-        thruster_data.speed = std::clamp(thruster_data.speed, 0.0f, 10.0f);
+        thrusterData.speed = std::clamp(thrusterData.speed, 0.0f, 10.0f);
+        ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 10, "%.2f");
 
-        ImGui::SliderFloat("Speed", &thruster_data.speed, 0, 10, "%.2f");
+        if (ImGui::SliderFloat("Claw 0", &claw0, -1, 1, "%.2f")) {
+            auto buf = (uint8_t*) &claw0;
+            communication.send({0x04, buf[0], buf[1], buf[2], buf[3]});
+        }
+        if (ImGui::SliderFloat("Claw 1", &claw1, -1, 1, "%.2f")) {
+            auto buf = (uint8_t*) &claw1;
+            communication.send({0x05, buf[0], buf[1], buf[2], buf[3]});
+        }
 
         ImGui::End();
 
@@ -513,8 +524,40 @@ int main(int argc, char** argv) {
         if (ImGui::Button("Open Model")) {
             std::system("open out.usdz");
         }
+        ImGui::End();
 
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+        ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + 10.0f, viewport->WorkSize.y + viewport->WorkPos.y - 10.0f), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::SetNextWindowBgAlpha(0.35f);
+        ImGui::Begin("Overlay", nullptr, window_flags);
+        static bool stopwatchRunning = false;
+        static std::chrono::system_clock::time_point stopwatchStart;
+        static std::chrono::duration<float, std::milli> stopwatchDuration;
 
+        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(stopwatchDuration);
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(stopwatchDuration - minutes);
+        auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatchDuration - minutes - seconds);
+
+        ImGui::Text("%02ld:%02lld:%03lld", minutes.count(), seconds.count(), milliseconds.count());
+
+        if (stopwatchRunning) {
+            stopwatchDuration = std::chrono::system_clock::now() - stopwatchStart;
+
+            if (ImGui::Button("Pause")) stopwatchRunning = false;
+        } else {
+            if (ImGui::Button("Start")) {
+                stopwatchRunning = true;
+                if (stopwatchDuration.count() == 0)
+                    stopwatchStart = std::chrono::system_clock::now();
+            }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            stopwatchRunning = false;
+            stopwatchDuration = std::chrono::duration<float, std::milli>(0);
+        }
 
         ImGui::End();
 

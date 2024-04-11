@@ -136,7 +136,7 @@ int open_feather() {
 int main() {
     std::thread bno_thread(bno_data_thread);
 
-//    int serial_port = open_feather();
+    int serial_port = open_feather();
 
     gst_init(NULL, NULL);
 
@@ -177,7 +177,7 @@ int main() {
                     if (n != 25) goto invalid;
 
 //                    #define DOUBLE_TO_CYCLE(x) std::clamp((uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0), (uint16_t) (1 << 15), (uint16_t) ((1 << 16) - 1));
-                    #define DOUBLE_TO_MS(x) std::clamp((uint16_t) (1500 + 250 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
+                    #define DOUBLE_TO_THRUSTER_MS(x) std::clamp((uint16_t) (1500 + 250 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
 
                     union {
                         struct {float forward, side, up, pitch, yaw, roll;};
@@ -194,12 +194,12 @@ int main() {
                         uint8_t buffer[13];
                     } thruster_command {.cmd_byte = 0x69};
 
-                    thruster_command.total_thrust[thruster_pins[0]] = DOUBLE_TO_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[1]] = DOUBLE_TO_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[2]] = DOUBLE_TO_MS((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[3]] = DOUBLE_TO_MS((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.total_thrust[thruster_pins[4]] = DOUBLE_TO_MS((thruster_info.up - thruster_info.roll) / 20.0);
-                    thruster_command.total_thrust[thruster_pins[5]] = DOUBLE_TO_MS((thruster_info.up + thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[0]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[1]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[2]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[3]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
+                    thruster_command.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
@@ -229,10 +229,24 @@ int main() {
                     break;
                 }
                 case 0x04: {
-                    if (n != 1) goto invalid;
+                    if (n != 5) goto invalid;
 
-                    const uint8_t cmd[] = {0x01};
-//                    if (write(serial_port, cmd, 1) < 0) std::cout << "Failed to write to claw" << std::endl;
+                    float value = *((float*) &buffer[1]);
+                    uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
+
+                    const uint8_t cmd[] = {0x50, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
+                    if (write(serial_port, cmd, 3) < 0) std::cout << "Failed to write to claw" << std::endl;
+
+                    break;
+                }
+                case 0x05: {
+                    if (n != 5) goto invalid;
+
+                    float value = *((float*) &buffer[1]);
+                    uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
+
+                    const uint8_t cmd[] = {0x40, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
+                    if (write(serial_port, cmd, 3) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;
                 }

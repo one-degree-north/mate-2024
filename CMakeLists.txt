@@ -32,7 +32,6 @@ if (BUILD_CLIENT)
     include_directories(lib/imgui)
 
     add_library(photogrammetry src/client/photogrammetry.swift)
-#    target_compile_options(photogrammetry PRIVATE -cxx-interoperability-mode=default)
 
     pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
     target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS} src)
@@ -41,7 +40,7 @@ if (BUILD_CLIENT)
 endif()
 
 if (BUILD_SERVER)
-    add_executable(server src/server/server.cpp)
+    add_executable(src/server/server.cpp)
     target_include_directories(server PRIVATE src)
     target_link_libraries(server PRIVATE ${GSTREAMER_LIBRARIES} i2c)
 endif()
