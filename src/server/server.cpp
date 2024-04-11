@@ -134,7 +134,7 @@ int open_feather() {
 }
 
 int main() {
-    std::thread bno_thread(bno_data_thread);
+//    std::thread bno_thread(bno_data_thread);
 
     int serial_port = open_feather();
 
