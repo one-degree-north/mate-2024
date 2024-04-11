@@ -205,12 +205,12 @@ int main() {
 //                    thruster_command.data.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
 //                    thruster_command.data.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
-                    thruster_command.data.total_thrust[thruster_pins[0]] = 1550;
-                    thruster_command.data.total_thrust[thruster_pins[1]] = 1550;
-                    thruster_command.data.total_thrust[thruster_pins[2]] = 1550;
-                    thruster_command.data.total_thrust[thruster_pins[3]] = 1550;
-                    thruster_command.data.total_thrust[thruster_pins[4]] = 1550;
-                    thruster_command.data.total_thrust[thruster_pins[5]] = 1550;
+                    thruster_command.data.total_thrust[thruster_pins[0]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[1]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[2]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[3]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[4]] = 1600;
+                    thruster_command.data.total_thrust[thruster_pins[5]] = 1600;
 
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
