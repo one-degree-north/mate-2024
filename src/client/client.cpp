@@ -1,5 +1,7 @@
 #include <iostream>
 #include <functional>
+#include <filesystem>
+#include <cmath>
 
 #include <gst/gst.h>
 #include <gst/app/app.h>
@@ -9,8 +11,18 @@
 #include "imgui_impl_opengl3.h"
 
 #include "comms.h"
+#include "font.h"
+#include "imgui_internal.h"
 
 #include <GLFW/glfw3.h>
+
+extern "C" {
+    bool is_completed();
+    double get_progress();
+    double get_eta();
+
+    void run_photogrammetry_session(const char* path);
+}
 
 GstElement* pipeline;
 void interrupt(int _signal) {
@@ -41,19 +53,11 @@ int main(int argc, char** argv) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
 
-
-#if defined(__APPLE__)
     const char* glsl_version = "#version 150";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#else
-    const char* glsl_version = "#version 130";
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "MATE Client", nullptr, nullptr);
     if (window == nullptr) return 1;
@@ -62,19 +66,45 @@ int main(int argc, char** argv) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void) io;
+    ImGuiIO &io = ImGui::GetIO(); (void) io;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    ImGui::StyleColorsDark();
+//    ImGui::StyleColorsDark();
+
+    ImFontConfig config;
+    config.OversampleH = 3;
+    config.OversampleV = 3;
+    io.Fonts->AddFontFromMemoryCompressedTTF(font_compressed_data, font_compressed_size, 14.0f, &config);
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.WindowRounding = 4;
+    style.FrameRounding = 2;
+    style.GrabRounding = 2;
+    style.TabRounding = 4;
+
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-
     gst_init(&argc, &argv);
-    pipeline = gst_parse_launch(R"(udpsrc port=6970 caps="application/x-rtp, encoding-name=JPEG" ! rtpjpegdepay ! jpegdec ! queue ! videoconvert ! appsink name=sink caps="video/x-raw, format=RGB")", nullptr);
+    GError *err = nullptr;
+    if (!std::filesystem::exists("images")) std::filesystem::create_directory("images");
+    pipeline = gst_parse_launch(
+    "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! tee name=t "
+        "t. ! queue ! jpegdec ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink "
+        "t. ! queue ! valve name=image-valve drop=true ! videorate skip-to-first=true ! capsfilter name=image-rate-filter caps=image/jpeg,framerate=2/1 ! multifilesink name=image-sink location=images/image%d.jpeg async=false", //
+    &err);
+    if (err) {
+        std::cerr << "Failed to create pipeline: " << err->message << std::endl;
+        return 1;
+    }
 
-    GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+    int imageFrameRate = 1;
+    bool imageRecording = false;
+
+    GstElement* imageValve = gst_bin_get_by_name(GST_BIN(pipeline), "image-valve");
+    GstElement* imageRateFilter = gst_bin_get_by_name(GST_BIN(pipeline), "image-rate-filter");
+    GstElement* imageSink = gst_bin_get_by_name(GST_BIN(pipeline), "image-sink");
+    GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "gui-sink");
     if (!sink) {
         std::cerr << "Failed to get sink from pipeline" << std::endl;
         return 1;
@@ -84,9 +114,8 @@ int main(int argc, char** argv) {
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
 
-
-    int videoWidth;
-    int videoHeight;
+    int videoWidth = 0;
+    int videoHeight = 0;
     GLuint videoTexture;
 
     glGenTextures (1, &videoTexture);
@@ -149,12 +178,55 @@ int main(int argc, char** argv) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::DockSpaceOverViewport();
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
 
+        ImGuiWindowFlags host_window_flags = 0;
+        host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+        host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("DockSpace", NULL, host_window_flags);
+        ImGui::PopStyleVar(3);
+
+        ImGuiID dockspace_id = ImGui::GetID("DockSpace");
+        if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr) {
+            ImGui::DockBuilderRemoveNode(dockspace_id);
+            ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+            ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+
+            ImGuiID dock_main_id = dockspace_id;
+            ImGuiID camera_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.6f, nullptr, &dock_main_id);
+            ImGuiID thruster_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+            ImGuiID reconstruction_space = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+
+            ImGui::DockBuilderDockWindow("Camera Stream", camera_space);
+            ImGui::DockBuilderDockWindow("Thruster Control", thruster_space);
+            ImGui::DockBuilderDockWindow("Reconstruction", reconstruction_space);
+            ImGui::DockBuilderDockWindow("Sensor Data", dock_main_id);
+
+
+            ImGui::DockBuilderFinish(dockspace_id);
+        }
+
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), 0, nullptr);
+        ImGui::End();
+
+
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(100, 500), ImGuiCond_Once);
         ImGui::ShowMetricsWindow();
 
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
         ImGui::ShowDemoWindow();
 
+        ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(100, 560), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(150, 70), ImGuiCond_FirstUseEver);
         ImGui::Begin("Ping");
         if (ImGui::Button("Ping")) {
             communication.send({0x01});
@@ -276,16 +348,6 @@ int main(int argc, char** argv) {
         ImGui::PopStyleVar();
 
         ImGui::Begin("Thruster Control");
-        if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thruster_data.speed++;
-        if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thruster_data.speed--;
-        if (ImGui::IsKeyPressed(ImGuiKey_0, false)) thruster_data.speed = 0;
-        if (ImGui::IsKeyPressed(ImGuiKey_1, false)) thruster_data.speed = 1;
-        if (ImGui::IsKeyPressed(ImGuiKey_2, false)) thruster_data.speed = 2;
-        if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thruster_data.speed = 3;
-        if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thruster_data.speed = 4;
-        if (thruster_data.speed < 0) thruster_data.speed = 0;
-
-        ImGui::Text("Speed: %f", thruster_data.speed);
 
         bool controlDataChanged = false;
         ImGui::Checkbox("Use Controller", &shouldUseController);
@@ -364,7 +426,7 @@ int main(int argc, char** argv) {
                 const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
 
                 float currXAxis = axes[0], currYAxis = axes[1] * -1;
-                float mag = sqrtf(powf(currXAxis, 2) + powf(currYAxis, 2));
+                float mag = std::sqrtf(std::powf(currXAxis, 2) + std::powf(currYAxis, 2));
                 currXAxis = currXAxis / mag;
                 currYAxis = currYAxis / mag;
 
@@ -398,15 +460,69 @@ int main(int argc, char** argv) {
             communication.send({0x04});
         }
 
+        if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thruster_data.speed++;
+        if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thruster_data.speed--;
+        if (ImGui::IsKeyPressed(ImGuiKey_0, false)) thruster_data.speed = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_1, false)) thruster_data.speed = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_2, false)) thruster_data.speed = 2;
+        if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thruster_data.speed = 3;
+        if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thruster_data.speed = 4;
+
+        thruster_data.speed = std::clamp(thruster_data.speed, 0.0f, 10.0f);
+
+        ImGui::SliderFloat("Speed", &thruster_data.speed, 0, 10, "%.2f");
+
+        ImGui::End();
+
+        ImGui::Begin("Reconstruction");
+
+        if (ImGui::SliderInt("Recording Frame Rate", &imageFrameRate, 1, 30)) {
+            GstCaps* caps = gst_caps_new_simple("image/jpeg", "framerate", GST_TYPE_FRACTION, imageFrameRate, 1, nullptr);
+            g_object_set(imageRateFilter, "caps", caps, nullptr);
+            gst_caps_unref(caps);
+        }
+
+        if (!imageRecording && ImGui::Button("Start Recording")) {
+            std::filesystem::remove_all("images");
+            std::filesystem::create_directory("images");
+
+            g_object_set(imageSink, "index", 0, nullptr);
+            g_object_set(imageValve, "drop", false, nullptr);
+
+            imageRecording = true;
+        } else if (imageRecording && ImGui::Button("Stop Recording")) {
+            g_object_set(imageValve, "drop", true, nullptr);
+            imageRecording = false;
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::ProgressBar((float) get_progress(), ImVec2(0.0f, 0.0f));
+        ImGui::SameLine();
+        ImGui::Text("ETA: %0.2fs", get_eta());
+
+        if (ImGui::Button("Start Photogrammetry Session")) {
+            if (std::filesystem::is_empty("images")) {
+                std::cerr << "Error: No images to process" << std::endl;
+            } else {
+                run_photogrammetry_session("images");
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Open Model")) {
+            std::system("open out.usdz");
+        }
+
+
+
         ImGui::End();
 
         ImGui::Render();
 
-
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
