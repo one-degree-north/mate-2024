@@ -263,6 +263,8 @@ int main() {
                     uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
 
                     const uint8_t cmd[] = {0x40, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
+                    for (int i = 0; i < 3; i++)
+                        std::cout << (int) cmd[i] << " ";
                     if (write(serial_port, cmd, 3) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;

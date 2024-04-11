@@ -10,8 +10,8 @@ void setup() {
 
     for (int i = 0; i < 6; i++) THRUSTERS[i].attach(PINS[i]);
 
-    CLAWS[0].attach(A4);
-    CLAWS[1].attach(A5);
+    CLAWS[0].attach(4);
+    CLAWS[1].attach(5);
 }
 
 void loop() {
