@@ -164,6 +164,7 @@ int main() {
     while (true) {
         if (communication.recv(buffer)) {
             const size_t n = buffer.size();
+            std::cout << buffer[0] << std::endl;
             switch (buffer[0]) {
                 case 0x01: { // ping
                     if (n != 1) goto invalid;
