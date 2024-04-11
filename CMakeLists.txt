@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(mate LANGUAGES CXX Swift)
+project(mate)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -20,6 +20,8 @@ include_directories(${GLIB_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS})
 link_directories(${GLIB_LIBRARY_DIRS} ${GSTREAMER_LIBRARY_DIRS})
 
 if (BUILD_CLIENT)
+    enable_language(Swift)
+
     add_executable(client src/client/client.cpp)
 
     add_subdirectory(lib/glfw)
