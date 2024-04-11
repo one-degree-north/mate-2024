@@ -208,12 +208,12 @@ int main() {
                         printf("%x ", thruster_command.buffer[i]);
                     std::cout << std::endl;
 
-//                    ssize_t s = write(serial_port, thruster_command.buffer, 13);
-//                    if (s < 0) {
-//                        std::cerr << "Error: Unable to write to serial port" << std::endl;
-//                    } else {
-//                        std::cout << "Wrote " << s << " bytes to serial port" << std::endl;
-//                    }
+                    ssize_t s = write(serial_port, thruster_command.buffer, 13);
+                    if (s < 0) {
+                        std::cerr << "Error: Unable to write to serial port" << std::endl;
+                    } else {
+                        std::cout << "Wrote " << s << " bytes to serial port" << std::endl;
+                    }
 
                     break;
                 }
