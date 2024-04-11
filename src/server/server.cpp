@@ -202,8 +202,8 @@ int main() {
                     thruster_command.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
 
-//                    for (int i = 1; i < 13; i += 2)
-//                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
+                    for (int i = 1; i < 13; i += 2)
+                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
 
                     for (int i = 0; i < 13; i++)
                         printf("%x ", thruster_command.buffer[i]);
