@@ -3,14 +3,15 @@
 const int PINS[] = {5, 6, 9, 10, 11, 4};
 Servo THRUSTERS[6] {};
 
-const int CLAWPINS[] = {12, 13};
 Servo CLAWS[2] {};
 
 void setup() {
     Serial.begin(115200);
 
     for (int i = 0; i < 6; i++) THRUSTERS[i].attach(PINS[i]);
-    for (int i = 0; i < 2; i++) CLAWS[i].attach(CLAWPINS[i]);
+    
+    CLAWS[0].attach(A4);
+    CLAWS[1].attach(A5);
 }
 
 void loop() {
