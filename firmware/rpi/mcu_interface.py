@@ -263,7 +263,7 @@ class MCUInterface:
         self.ser.write(bytes([0x04]))
 
 class ArduinoInterface:
-    def __init__(self, serial_port="/dev/ttyACM0", stop_event=None, use_stop_event=False, debug=False, write_delay=0.05, bno_data=None, data_lock=None):
+    def __init__(self, serial_port="/dev/ttyACM0", stop_event=None, use_stop_event=False, debug=False, write_delay=0.05):
         self.serial_port = serial_port
         # self.ser = serial.Serial(serial_port, 115200, dsrdtr=True, rtscts=True)
         self.init_serial()
@@ -305,6 +305,7 @@ class ArduinoInterface:
             self.ser.close()
             del self.ser
         self.ser = serial.Serial(self.serial_port, 115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS, timeout=None, write_timeout=0.5)
+        # self.ser = serial.Serial(self.serial_port, 115200)
         # self.ser.dtr = True
 
     def start(self):
@@ -319,7 +320,7 @@ class ArduinoInterface:
     def _write_packet(self, cmd:int, data): #WRITE IS BIG ENDIAN!!!!
         try:
             # self.ser.reset_input_buffer()
-            out: bytes = struct.pack("<B", cmd) + data
+            out: bytes = struct.pack("<c", cmd) + data
             print(out.hex(" "))
             self.ser.write(out)
             self.ser.reset_output_buffer()
@@ -348,9 +349,13 @@ class ArduinoInterface:
         if self.debug:
             print("finished writing")
 
-    def set_servos(self, vals):
-        print(f"setting thrusts {thrusts}")
-        self._write_packet(0x28, 0x2F, struct.pack(">HH", *vals))
+    def set_rotate_servo(self, val):
+        print(f"setting rotate servo {val}")
+        self._write_packet(0x50, struct.pack("<H", val))
+    
+    def set_grip_servo(self, val):
+        print(f"setting grip servo {val}")
+        self._write_packet(0x40, struct.pack("<H", val))
 
 if __name__ == "__main__":
     interface = ArduinoInterface("/dev/ttyACM0", debug=True)
@@ -360,6 +365,12 @@ if __name__ == "__main__":
             t = float(input("thrust: "))
             thrusts = [t, t, t, t, t, t]
             interface.set_thrusters(thrusts)
+        if val == "grip":
+            t = float(input("microseconds: "))
+            interface.set_grip_servo(t)
+        if val == "rot":
+            t = float(input("microseconds: "))
+            interface.set_rotate_servo(t)
     # data_lock=threading.Lock()
     # interface = MCUInterface("/dev/ttyACM0", debug=True, bno_data=bno_data,data_lock=data_lock)
     # interface.start()
