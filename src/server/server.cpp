@@ -177,14 +177,13 @@ int main() {
                     std::cout << "Received " << n << "bytes" << std::endl;
                     if (n != 25) goto invalid;
 
-//                    #define DOUBLE_TO_CYCLE(x) std::clamp((uint16_t) ((1 << 15) + ((1 << 15) - 1) * (x + 1) / 2.0), (uint16_t) (1 << 15), (uint16_t) ((1 << 16) - 1));
-                    #define DOUBLE_TO_THRUSTER_MS(x) std::clamp((uint16_t) (1500 + 250 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
+                    #define DOUBLE_TO_THRUSTER_MS(x) std::clamp((uint16_t) (1000 + 500 * (x + 1)), (uint16_t) 1000, (uint16_t) 2000)
 
                     union {
                         struct {float forward, side, up, pitch, yaw, roll;};
                         uint8_t buffer[25];
                     } thruster_info{};
-                    std::copy(buffer.begin() + 1, buffer.begin() + 7, thruster_info.buffer);
+                    std::copy(buffer.begin() + 1, buffer.begin() + 25, thruster_info.buffer);
                     const int thruster_pins[] = {5, 1, 2, 4, 0, 3};
 
                     union {
@@ -204,6 +203,8 @@ int main() {
                     thruster_command.data.total_thrust[thruster_pins[3]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
                     thruster_command.data.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.data.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
+
+                    printf("[%0.2f, %0.2f, %0.2f, %0.2f, %0.2f, %0.2f]\n", thruster_info.forward, thruster_info.side, thruster_info.up, thruster_info.pitch, thruster_info.roll, thruster_info.yaw);
 
                     std::cout << "[";
                     for (int i = 0; i < 6; i++)
