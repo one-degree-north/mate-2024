@@ -65,7 +65,7 @@ def arduino_main(stop_event=None, use_stop_event=False, server_debug=False, data
     thrust_controller.set_interface(interface)
     server.set_thruster_control(thrust_controller)
     server.set_interface(interface)
-    interface.set_server(server)
+    # interface.set_server(server)
 
     data_input=None
     # config if we are using bno data

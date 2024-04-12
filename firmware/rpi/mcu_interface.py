@@ -317,10 +317,12 @@ class ArduinoInterface:
     #     self.claw_pwm.stop()
         # GPIO.cleanup()
 
+
+
     def _write_packet(self, cmd:int, data): #WRITE IS BIG ENDIAN!!!!
         try:
             # self.ser.reset_input_buffer()
-            out: bytes = struct.pack("<c", cmd) + data
+            out: bytes = struct.pack("<c", bytes([cmd])) + data
             print(out.hex(" "))
             self.ser.write(out)
             self.ser.reset_output_buffer()
@@ -364,6 +366,12 @@ if __name__ == "__main__":
         if val == "all":
             t = float(input("thrust: "))
             thrusts = [t, t, t, t, t, t]
+            interface.set_thrusters(thrusts)
+        if val == "st":
+            t = float(input("microseconds: "))
+            thruster = int(input("thruster: "))
+            thrusts = [0]*6
+            thrusts[thruster] = t
             interface.set_thrusters(thrusts)
         if val == "grip":
             t = float(input("microseconds: "))
