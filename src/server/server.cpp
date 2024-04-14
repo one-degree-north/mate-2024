@@ -236,10 +236,10 @@ int main() {
 
                     printf("[%0.2f, %0.2f, %0.2f, %0.2f, %0.2f, %0.2f]\n", thruster_info.forward, thruster_info.side, thruster_info.up, thruster_info.pitch, thruster_info.roll, thruster_info.yaw);
 
-                    std::cout << "[";
-                    for (int i = 0; i < 6; i++)
-                        std::cout << thruster_command.data.total_thrust[i] << ", ";
-                    std::cout << "]" << std::endl;
+//                    std::cout << "[";
+//                    for (int i = 0; i < 6; i++)
+//                        std::cout << thruster_command.data.total_thrust[i] << ", ";
+//                    std::cout << "]" << std::endl;
 
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
