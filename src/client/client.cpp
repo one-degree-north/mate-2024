@@ -1,8 +1,9 @@
 #include <iostream>
-#include <functional>
 #include <filesystem>
-#include <format>
-#include <cmath>
+#include <sstream>
+#include <fstream>
+
+#include "nfd.hpp"
 
 #include <gst/gst.h>
 #include <gst/app/app.h>
@@ -14,6 +15,7 @@
 #include "comms.h"
 #include "font.h"
 #include "imgui_internal.h"
+#include "implot.h"
 
 #include <GLFW/glfw3.h>
 
@@ -54,6 +56,8 @@ int main(int argc, char** argv) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
 
+    NFD::Guard nfdGuard;
+
     const char* glsl_version = "#version 150";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
@@ -81,18 +85,21 @@ int main(int argc, char** argv) {
     style.FrameRounding = 2;
     style.GrabRounding = 2;
     style.TabRounding = 4;
+    style.FramePadding.x = 6;
+    style.WindowTitleAlign.x = 0.5;
 
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+    ImPlot::CreateContext();
 
     gst_init(&argc, &argv);
     GError *err = nullptr;
     if (!std::filesystem::exists("images")) std::filesystem::create_directory("images");
     static GstElement* pipeline = gst_parse_launch(
-    "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
-        "t. ! queue ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink "
-        "t. ! queue ! valve name=image-valve drop=true ! videorate skip-to-first=true ! capsfilter name=image-rate-filter caps=video/x-raw,framerate=2/1 ! videocrop name=image-crop bottom=0 ! jpegenc ! multifilesink name=image-sink location=images/image%d.jpeg async=false", //
+    "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegparse ! jpegdec ! tee name=t "
+        "! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink drop=true sync=false "
+        "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink location=images/image%d.jpeg async=false",
     &err);
     if (err) {
         std::cerr << "Failed to create pipeline: " << err->message << std::endl;
@@ -102,10 +109,12 @@ int main(int argc, char** argv) {
     int imageFrameRate = 1;
     bool imageRecording = false;
 
+//    GstElement* tee = gst_bin_get_by_name(GST_BIN(pipeline), "t");
     GstElement* imageValve = gst_bin_get_by_name(GST_BIN(pipeline), "image-valve");
     GstElement* imageRateFilter = gst_bin_get_by_name(GST_BIN(pipeline), "image-rate-filter");
     GstElement* imageCrop = gst_bin_get_by_name(GST_BIN(pipeline), "image-crop");
     GstElement* imageSink = gst_bin_get_by_name(GST_BIN(pipeline), "image-sink");
+
     GstElement* sink = gst_bin_get_by_name(GST_BIN(pipeline), "gui-sink");
     if (!sink) {
         std::cerr << "Failed to get sink from pipeline" << std::endl;
@@ -113,6 +122,8 @@ int main(int argc, char** argv) {
     }
 
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
+//    gst_element_unlink(tee, imageQueue);
+//    gst_element_set_state(imageQueue, GST_STATE_NULL);
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
 
@@ -137,6 +148,8 @@ int main(int argc, char** argv) {
     struct { int system, gyro, acc, mag; } calibration_status {};
     bool bnoDataReceived = false;
     bool bnoIsConfiguring = false;
+
+    std::vector<std::pair<double, typeof sensor_data>> sensor_history;
 
     union {
         struct { float front, side, up, pitch, roll, yaw, speed; };
@@ -270,6 +283,52 @@ int main(int argc, char** argv) {
                 ImGui::Text("Linear Acceleration (m/s): (x = %0.2f, y = %0.2f, z = %0.2f)", sensor_data.lin_acc.x, sensor_data.lin_acc.y, sensor_data.lin_acc.z);
                 ImGui::Text("Gravity (m/s): (x = %0.2f, y = %0.2f, z = %0.2f)", sensor_data.grav.x, sensor_data.grav.y, sensor_data.grav.z);
                 ImGui::Text("Temperature (C): %0.2f", sensor_data.temp);
+
+                static enum { ACCELERATION, MAGNETOMETER, GYROSCOPE, EULER, QUATERNION, LIN_ACC, GRAVITY, TEMPERATURE} graphType = ACCELERATION;
+
+                static const struct {
+                    std::string name;
+                    uint8_t offset;
+                    uint8_t values;
+                    double min = -10;
+                    double max = 10;
+                    std::vector<std::string> labels = {"X", "Y", "Z", "W"};
+                } graphTypes[] = {
+                    {"Acceleration", 0, 3},
+                    {"Magnetometer", 3, 3, -50, 50},
+                    {"Gyroscope", 6, 3, -50, 50},
+                    {"Euler Angles", 9, 3, -360, 360},
+                    {"Quaternion", 12, 4, -1, 1},
+                    {"Linear Acceleration", 16, 3},
+                    {"Gravity", 19, 3},
+                    {"Temperature", 22, 1, -10, 10, {"Temp"}}
+                };
+                if (ImGui::BeginCombo("Data Type", graphTypes[graphType].name.c_str())) {
+                    for (int i = 0; i < IM_ARRAYSIZE(graphTypes); i++) {
+                        bool isSelected = graphType == i;
+                        if (ImGui::Selectable(graphTypes[i].name.c_str(), isSelected)) graphType = (typeof graphType) i;
+                        if (isSelected) ImGui::SetItemDefaultFocus();
+                    }
+
+                    ImGui::EndCombo();
+                }
+
+                if (ImPlot::BeginPlot("##", ImVec2(0, 0), ImPlotFlags_NoFrame)) {
+                    double t = ImGui::GetTime();
+                    ImPlot::SetupAxesLimits(std::max(t - 10, 0.0), std::max(t, 10.0), graphTypes[graphType].min, graphTypes[graphType].max, ImGuiCond_Always);
+
+
+                    if (!sensor_history.empty()) {
+                        for (int i = 0; i < graphTypes[graphType].values; i++) {
+                            ImPlot::PlotLine(graphTypes[graphType].labels[i].c_str(), &sensor_history[0].first, &sensor_history[0].second.acc.x + i + 8 * graphTypes[graphType].offset,
+                                             sensor_history.size(), 0, 0, sizeof(std::pair<double,
+                            typeof sensor_data>));
+                        }
+                    }
+
+
+                    ImPlot::EndPlot();
+                }
             }
         }
 
@@ -320,6 +379,11 @@ int main(int argc, char** argv) {
                     sensor_data.grav = {unscaled.grav_x / 100.0, unscaled.grav_y / 100.0, unscaled.grav_z / 100.0};
                     sensor_data.temp = unscaled.temp;
 
+                    sensor_history.emplace_back(ImGui::GetTime(), sensor_data);
+
+                    if (sensor_history.size() > 300) {
+                        sensor_history.erase(sensor_history.begin());
+                    }
                     break;
             }
         }
@@ -429,9 +493,6 @@ int main(int argc, char** argv) {
                 const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
 
                 float currXAxis = axes[0], currYAxis = axes[1] * -1;
-                float mag = std::sqrtf(std::powf(currXAxis, 2) + std::powf(currYAxis, 2));
-                currXAxis = currXAxis / mag;
-                currYAxis = currYAxis / mag;
 
                 ImGui::Text("X: %f, Y: %f", currXAxis, currYAxis);
 
@@ -457,11 +518,16 @@ int main(int argc, char** argv) {
             std::copy(thrusterData.data, thrusterData.data + 24, thruster_buf.begin() + 1);
 
             communication.send(thruster_buf);
-        };
-
-        if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_Enter, false)) {
-            communication.send({0x04});
         }
+
+        static float clawSpeeds[2] = {0.01f, 0.01f};
+        ImGui::SliderFloat2("Claw Speed", clawSpeeds, 0.01f, 0.2f);
+
+        ImGui::Separator();
+
+//        if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_Enter, false)) {
+//            communication.send({0x04});
+//        }
 
         if (ImGui::IsKeyPressed(ImGuiKey_Equal, false)) thrusterData.speed++;
         if (ImGui::IsKeyPressed(ImGuiKey_Minus, false)) thrusterData.speed--;
@@ -471,17 +537,40 @@ int main(int argc, char** argv) {
         if (ImGui::IsKeyPressed(ImGuiKey_3, false)) thrusterData.speed = 3;
         if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thrusterData.speed = 4;
 
-        thrusterData.speed = std::clamp(thrusterData.speed, 0.0f, 10.0f);
-        if (ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 10, "%.2f")) controlDataChanged = true;
+        thrusterData.speed = std::clamp(thrusterData.speed, 0.0f, 40.0f);
+        if (ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 40, "%.2f")) controlDataChanged = true;
 
-        if (ImGui::SliderFloat("Claw 0", &claw0, -1, 1, "%.2f")) {
+        bool gripChanged = false;
+        if (ImGui::IsKeyPressed(ImGuiKey_K)) {
+            claw0 = std::clamp(claw0 + clawSpeeds[0], -1.0f, 1.0f);
+            gripChanged = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_I)) {
+            claw0 = std::clamp(claw0 - clawSpeeds[0], -1.0f, 1.0f);
+            gripChanged = true;
+        }
+        if (ImGui::SliderFloat("Grip", &claw0, -1, 1, "%.2f")) gripChanged = true;
+        if (gripChanged) {
             auto buf = (uint8_t*) &claw0;
             communication.send({0x04, buf[0], buf[1], buf[2], buf[3]});
         }
-        if (ImGui::SliderFloat("Claw 1", &claw1, -1, 1, "%.2f")) {
+
+        bool rotChanged = false;
+        if (ImGui::IsKeyPressed(ImGuiKey_U)) {
+            claw1 = std::clamp(claw1 + clawSpeeds[1], -1.0f, 1.0f);
+            rotChanged = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_O)) {
+            claw1 = std::clamp(claw1 - clawSpeeds[1], -1.0f, 1.0f);
+            rotChanged = true;
+        }
+        if (ImGui::SliderFloat("Rotation", &claw1, -1, 1, "%.2f")) rotChanged = true;
+        if (rotChanged) {
             auto buf = (uint8_t*) &claw1;
             communication.send({0x05, buf[0], buf[1], buf[2], buf[3]});
         }
+
+
 
         ImGui::End();
 
@@ -502,12 +591,19 @@ int main(int argc, char** argv) {
             std::filesystem::remove_all("images");
             std::filesystem::create_directory("images");
 
+            gst_element_send_event (pipeline, gst_event_new_flush_start ());
+            gst_element_send_event (pipeline, gst_event_new_flush_stop(true));
             g_object_set(imageSink, "index", 0, nullptr);
+//            gst_element_set_state(imageQueue, GST_STATE_PLAYING);
+//            gst_element_link(tee, imageQueue);
+//            gst_element_set_state(imageQueue, GST_STATE_PLAYING);
             g_object_set(imageValve, "drop", false, nullptr);
 
             imageRecording = true;
         } else if (imageRecording && ImGui::Button("Stop Recording")) {
             g_object_set(imageValve, "drop", true, nullptr);
+//            gst_element_unlink(tee, imageQueue);
+//            gst_element_set_state(imageQueue, GST_STATE_NULL);
             imageRecording = false;
         }
 
@@ -562,6 +658,56 @@ int main(int argc, char** argv) {
         if (ImGui::Button("Reset")) {
             stopwatchRunning = false;
             stopwatchDuration = std::chrono::duration<float, std::milli>(0);
+        }
+
+        ImGui::End();
+
+        ImGui::Begin("Sturgeon Analyzer");
+        static struct {
+            std::vector<int> times;
+            std::vector<std::pair<std::string, std::vector<int>>> values;
+        } surgeonData;
+        static NFD::UniquePath outPath;
+        if (ImGui::Button("Open File")) {
+            nfdfilteritem_t filters[1] = {{ "Data", "csv" }};
+            if (NFD::OpenDialog(outPath, filters, 1) == NFD_OKAY) {
+                std::ifstream file(outPath.get());
+
+                surgeonData = {};
+
+                std::string line;
+                std::getline(file, line);
+
+                std::stringstream ss(line);
+                std::string token;
+                std::getline(ss, token, ',');
+
+                std::vector<int> values;
+                while (std::getline(ss, token, ',')) {
+                    surgeonData.times.push_back(std::stoi(token));
+                }
+
+                for (int i = 0; std::getline(file, line); i++) {
+                    ss = std::stringstream(line);
+                    token = "";
+                    std::getline(ss, token, ',');
+                    surgeonData.values.emplace_back(token, std::vector<int>());
+                    for (int j = 0; j < surgeonData.times.size(); j++) {
+                        std::getline(ss, token, ',');
+                        surgeonData.values[i].second.push_back(std::stoi(token));
+                    }
+                }
+
+                file.close();
+            }
+
+        }
+
+        if (!surgeonData.values.empty() && ImPlot::BeginPlot("Sturgeon Analyzer", ImVec2(-1, 0))) {
+            for (auto &[name, values] : surgeonData.values) {
+                ImPlot::PlotLine(name.c_str(), surgeonData.times.data(), values.data(), surgeonData.times.size(), 0, 0, sizeof(int));
+            }
+            ImPlot::EndPlot();
         }
 
         ImGui::End();

@@ -45,9 +45,7 @@ private func info(_ message: String, terminator: String = "\n") {
 }
 
 private func warn(_ message: String, terminator: String = "\n") {
-    if (LOG) {
-        print("\u{001B}[0;33m[\(timeFormatter.string(from: Date()))] \(message)\u{001B}[0;0m", terminator: terminator)
-    }
+    print("\u{001B}[0;33m[\(timeFormatter.string(from: Date()))] \(message)\u{001B}[0;0m", terminator: terminator)
 }
 
 
@@ -117,11 +115,11 @@ public func run_photogrammetry_session(imagesPath: UnsafePointer<CChar>) {
 
                     try? FileManager.default.createDirectory(at: URL(filePath: "model"), withIntermediateDirectories: true)
 
-                    // do {
-                    //     try modelAsset.export(to: URL(filePath: "model/out.obj"))
-                    // } catch {
-                    //     err("Error while exporting: \(error)")
-                    // }
+                     do {
+                         try modelAsset.export(to: URL(filePath: "model/out.obj"))
+                     } catch {
+                         err("Error while exporting: \(error)")
+                     }
 
                     completed.withLock { completed in completed = true }
 

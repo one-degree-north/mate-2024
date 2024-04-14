@@ -16,8 +16,8 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
 
-include_directories(${GLIB_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS})
-link_directories(${GLIB_LIBRARY_DIRS} ${GSTREAMER_LIBRARY_DIRS})
+include_directories(${GSTREAMER_INCLUDE_DIRS})
+link_directories(${GSTREAMER_LIBRARY_DIRS})
 
 if (BUILD_CLIENT)
     enable_language(Swift)
@@ -33,12 +33,20 @@ if (BUILD_CLIENT)
     add_library(imgui ${IMGUI_SOURCES})
     include_directories(lib/imgui)
 
+    file(GLOB_RECURSE IMPLOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/implot/*.cpp)
+    add_library(implot ${IMPLOT_SOURCES})
+    include_directories(lib/implot)
+
+    add_subdirectory(lib/nativefiledialog-extended)
+    include_directories(lib/nativefiledialog-extended/src/include)
+
     add_library(photogrammetry src/client/photogrammetry.swift)
 
     pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
     target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS} src)
+
     target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
-    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry)
+    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry implot nfd)
 endif()
 
 if (BUILD_SERVER)

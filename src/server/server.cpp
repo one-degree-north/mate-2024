@@ -4,7 +4,6 @@ extern "C" {
 }
 
 #include <gst/gst.h>
-#include <gst/app/app.h>
 
 #include <chrono>
 #include <thread>
@@ -34,6 +33,8 @@ Communication communication(client_address, 7070);
 bool isConfiguringBNO = true;
 int bno;
 
+int serial_port = -1;
+
 int i2c_smbus_write_byte_data(int file, uint8_t reg, uint8_t value);
 int i2c_smbus_read_byte_data(int file, uint8_t reg);
 
@@ -57,7 +58,7 @@ void bno_data_thread() {
         std::exit(1);
     }
 
-    i2c_smbus_write_byte_data(bno, 0x3F, 0x20); // Reset
+     // Reset
     std::this_thread::sleep_for(std::chrono::milliseconds(650)); // Wait for sensor to reset
 
     i2c_smbus_write_byte_data(bno, 0x3E, 0); // Normal Power Mode
@@ -83,12 +84,12 @@ void bno_data_thread() {
         }
         bno_mutex.unlock();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(40));
     }
 }
 
-int open_feather() {
-    int serial_port = open("/dev/ttyACM0", O_RDWR | O_NONBLOCK | O_NOCTTY);
+void open_feather() {
+    serial_port = open("/dev/ttyACM0", O_RDWR | O_NONBLOCK | O_NOCTTY);
     if (serial_port < 0) {
         std::cerr << "Error: Unable to open serial port" << std::endl;
         std::exit(1);
@@ -126,17 +127,24 @@ int open_feather() {
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        return 1;
+        std::exit(1);
     }
     std::cout << "Set serial port attributes" << std::endl;
+}
 
-    return serial_port;
+void interrupt(int _signal) {
+    if (serial_port >= 0) {
+        close(serial_port);
+    }
+
+    exit(0);
 }
 
 int main() {
 //    std::thread bno_thread(bno_data_thread);
-
-    int serial_port = open_feather();
+    open_feather();
+    signal(SIGINT, interrupt);
+    signal(SIGTERM, interrupt);
 
     gst_init(NULL, NULL);
 
@@ -164,7 +172,6 @@ int main() {
     while (true) {
         if (communication.recv(buffer)) {
             const size_t n = buffer.size();
-            std::cout << buffer[0] << std::endl;
             switch (buffer[0]) {
                 case 0x01: { // ping
                     if (n != 1) goto invalid;
@@ -184,25 +191,48 @@ int main() {
                         uint8_t buffer[25];
                     } thruster_info{};
                     std::copy(buffer.begin() + 1, buffer.begin() + 25, thruster_info.buffer);
-                    const int thruster_pins[] = {5, 1, 2, 4, 0, 3};
+//                    const int thruster_pins[] = {5,1,2,4,0,3};
+                    const int thruster_pins[] = {0, 3, 4, 2, 5, 1};
+                    // 0: front right
+                    // 1: mid right, reversed
+                    // 2: back right, reversed
+                    // 3: front left
+                    // 4: back left, reversed
+                    // 5: mid left
+
+                    // 0: front right
+                    // 3: front left
+                    // 4: back left, reversed
+                    // 2: back right, reversed
+                    // 5: mid left
+                    // 1: mid right, reversed
+
 
                     union {
                         #pragma pack(push, 1)
                         struct {
                             uint8_t cmd_byte;
-                            unsigned short total_thrust[6];
+//                            unsigned short total_thrust[6];
+                            uint16_t front_right, mid_right, back_right, front_left, back_left, mid_left;
                         } data;
                         #pragma pack(pop)
 
                         uint8_t buffer[13];
                     } thruster_command {.data = {.cmd_byte = 0x69}};
 
-                    thruster_command.data.total_thrust[thruster_pins[0]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.data.total_thrust[thruster_pins[1]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.data.total_thrust[thruster_pins[2]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
-                    thruster_command.data.total_thrust[thruster_pins[3]] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.data.total_thrust[thruster_pins[4]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
-                    thruster_command.data.total_thrust[thruster_pins[5]] = DOUBLE_TO_THRUSTER_MS((thruster_info.up + thruster_info.roll) / 20.0);
+//                    thruster_command.data.total_thrust[0] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+//                    thruster_command.data.total_thrust[3] = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+//                    thruster_command.data.total_thrust[4] = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+//                    thruster_command.data.total_thrust[2] = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+//                    thruster_command.data.total_thrust[5] = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
+//                    thruster_command.data.total_thrust[1] = DOUBLE_TO_THRUSTER_MS(-(thruster_info.up + thruster_info.roll) / 20.0);
+
+                    thruster_command.data.front_right = DOUBLE_TO_THRUSTER_MS((thruster_info.forward - thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.data.front_left = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.data.back_left = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
+                    thruster_command.data.back_right = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
+                    thruster_command.data.mid_left = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
+                    thruster_command.data.mid_right = DOUBLE_TO_THRUSTER_MS(-(thruster_info.up + thruster_info.roll) / 20.0);
 
                     printf("[%0.2f, %0.2f, %0.2f, %0.2f, %0.2f, %0.2f]\n", thruster_info.forward, thruster_info.side, thruster_info.up, thruster_info.pitch, thruster_info.roll, thruster_info.yaw);
 
@@ -211,13 +241,6 @@ int main() {
                         std::cout << thruster_command.data.total_thrust[i] << ", ";
                     std::cout << "]" << std::endl;
 
-//                    thruster_command.data.total_thrust[thruster_pins[0]] = 1600;
-//                    thruster_command.data.total_thrust[thruster_pins[1]] = 1600;
-//                    thruster_command.data.total_thrust[thruster_pins[2]] = 1600;
-//                    thruster_command.data.total_thrust[thruster_pins[3]] = 1600;
-//                    thruster_command.data.total_thrust[thruster_pins[4]] = 1600;
-//                    thruster_command.data.total_thrust[thruster_pins[5]] = 1600;
-
 //                    for (int i = 1; i < 13; i += 2)
 //                        std::swap(thruster_command.buffer[i], thruster_command.buffer[i + 1]);
 
@@ -225,6 +248,7 @@ int main() {
                         printf("%x ", thruster_command.buffer[i]);
                     std::cout << std::endl;
 
+                    if (serial_port < 0) break;
                     ssize_t s = write(serial_port, thruster_command.buffer, 13);
                     if (s < 0) {
                         std::cerr << "Error: Unable to write to serial port" << std::endl;
@@ -249,9 +273,15 @@ int main() {
                     if (n != 5) goto invalid;
 
                     float value = *((float*) &buffer[1]);
-                    uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
+                    std::cout << "recieved value of: " << value << std::endl;
+                    uint16_t claw_cycle = std::clamp((uint16_t) (1300 + 150 * (value + 1)), (uint16_t) 1300, (uint16_t) 1600);
+                    std::cout << "claw cycle: " << claw_cycle << std::endl;
 
-                    const uint8_t cmd[] = {0x50, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
+                    const uint8_t cmd[] = {0x40, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
+                    for (int i = 0; i < 3; i++)
+                        printf("%x ", cmd[i]);
+                    std::cout << std::endl;
+                    if (serial_port < 0) break;
                     if (write(serial_port, cmd, 3) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;
@@ -260,11 +290,15 @@ int main() {
                     if (n != 5) goto invalid;
 
                     float value = *((float*) &buffer[1]);
-                    uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
+                    std::cout << "recieved value of: " << value << std::endl;
+//                    uint16_t claw_cycle = std::clamp((uint16_t) (500 + 1000 * (value + 1)), (uint16_t) 500, (uint16_t) 2500);
+                    uint16_t claw_cycle = std::clamp((uint16_t) (1300 + 150 * (value + 1)), (uint16_t) 1300, (uint16_t) 1600);
+                    std::cout << "claw cycle: " << claw_cycle << std::endl;
 
                     const uint8_t cmd[] = {0x40, (uint8_t) (claw_cycle & 0xFF), (uint8_t) (claw_cycle >> 8)};
                     for (int i = 0; i < 3; i++)
                         std::cout << (int) cmd[i] << " ";
+                    if (serial_port < 0) return 0;
                     if (write(serial_port, cmd, 3) < 0) std::cout << "Failed to write to claw" << std::endl;
 
                     break;
