@@ -231,7 +231,7 @@ int main() {
                     thruster_command.data.front_left = DOUBLE_TO_THRUSTER_MS((thruster_info.forward + thruster_info.side + thruster_info.yaw) / 30.0);
                     thruster_command.data.back_left = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward - thruster_info.side + thruster_info.yaw) / 30.0);
                     thruster_command.data.back_right = DOUBLE_TO_THRUSTER_MS(-(thruster_info.forward + thruster_info.side - thruster_info.yaw) / 30.0);
-                    thruster_command.data.mid_left = DOUBLE_TO_THRUSTER_MS((thruster_info.up - thruster_info.roll) / 20.0);
+                    thruster_command.data.mid_left = DOUBLE_TO_THRUSTER_MS(- (thruster_info.up - thruster_info.roll) / 20.0);
                     thruster_command.data.mid_right = DOUBLE_TO_THRUSTER_MS(-(thruster_info.up + thruster_info.roll) / 20.0);
 
                     printf("[%0.2f, %0.2f, %0.2f, %0.2f, %0.2f, %0.2f]\n", thruster_info.forward, thruster_info.side, thruster_info.up, thruster_info.pitch, thruster_info.roll, thruster_info.yaw);

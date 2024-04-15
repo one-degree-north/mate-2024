@@ -482,8 +482,8 @@ int main(int argc, char** argv) {
             bindThrusterKey(ImGuiKey_U, -thrusterData.speed, thrusterData.pitch);
             bindThrusterKey(ImGuiKey_J, -thrusterData.speed, thrusterData.roll);
             bindThrusterKey(ImGuiKey_L, thrusterData.speed, thrusterData.roll);
-            bindThrusterKey(ImGuiKey_Q, -thrusterData.speed, thrusterData.yaw);
-            bindThrusterKey(ImGuiKey_E, thrusterData.speed, thrusterData.yaw);
+            bindThrusterKey(ImGuiKey_Q, thrusterData.speed, thrusterData.yaw);
+            bindThrusterKey(ImGuiKey_E, -thrusterData.speed, thrusterData.yaw);
         } else {
             bool isConnected = glfwJoystickPresent(GLFW_JOYSTICK_1);
             if (isConnected) {
@@ -538,6 +538,7 @@ int main(int argc, char** argv) {
         if (ImGui::IsKeyPressed(ImGuiKey_4, false)) thrusterData.speed = 4;
 
         thrusterData.speed = std::clamp(thrusterData.speed, 0.0f, 40.0f);
+        if (ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 40, "%.2f")) controlDataChanged = true;
         if (ImGui::SliderFloat("Speed", &thrusterData.speed, 0, 40, "%.2f")) controlDataChanged = true;
 
         bool gripChanged = false;
@@ -697,6 +698,20 @@ int main(int argc, char** argv) {
                         surgeonData.values[i].second.push_back(std::stoi(token));
                     }
                 }
+
+//                std::vector<std::tuple<int, std::string, int, int>> periods;
+//                for (auto &[name, values] : surgeonData.values) {
+//                    int sum = 0;
+//                    for (int i = 0; i < 5; i++) {
+//                        sum += values[i];
+//                    }
+//                    periods.emplace_back(sum, name, surgeonData.times[0], surgeonData.times[4]);
+//                    for (int i = 5; i < values.size(); i++) {
+//                        sum += values[i];
+//                        sum -= values[i - 5];
+//                        periods.emplace_back(sum, surgeonData.times[i - 4], surgeonData.times[i]);
+//                    }
+//                }
 
                 file.close();
             }
