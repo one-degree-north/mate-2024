@@ -141,8 +141,8 @@ void interrupt(int _signal) {
 }
 
 int main() {
-//    std::thread bno_thread(bno_data_thread);
-    open_feather();
+    std::thread bno_thread(bno_data_thread);
+//    open_feather();
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
 

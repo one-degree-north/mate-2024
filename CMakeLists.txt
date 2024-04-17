@@ -37,6 +37,10 @@ if (BUILD_CLIENT)
     add_library(implot ${IMPLOT_SOURCES})
     include_directories(lib/implot)
 
+    file(GLOB_RECURSE PIGPIO_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/pigpio/*.c)
+    add_library(pigpio ${PIGPIO_SOURCES})
+    include_directories(lib/pigpio)
+
     add_subdirectory(lib/nativefiledialog-extended)
     include_directories(lib/nativefiledialog-extended/src/include)
 
@@ -46,7 +50,7 @@ if (BUILD_CLIENT)
     target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS} src)
 
     target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
-    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry implot nfd)
+    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry implot nfd pigpio)
 endif()
 
 if (BUILD_SERVER)

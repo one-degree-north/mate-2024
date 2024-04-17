@@ -1,3 +1,27 @@
+//#include <iostream>
+//#include <thread>
+//
+//#include "pigpiod_if2.h"
+//
+//
+//int main() {
+//    int pi = pigpio_start("192.168.1.2", "8888");
+//
+////    int bno = i2c_open(pi, 1, 0x28, 0);
+//    int depth_sensor = i2c_open(pi, 1, 0x76, 0);
+//    if (depth_sensor < 0) {
+//        std::cerr << "Failed to open depth sensor" << std::endl;
+//        return 1;
+//    }
+//
+//    i2c_write_byte(pi, depth_sensor, 0x1E);
+//    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//
+//    uint16_t C[8];
+//    i2c_zip(pi, depth_sensor, "r 0x1E 8 r 0x28 8", (char*) C, 16);
+//
+//}
+
 #include <iostream>
 #include <filesystem>
 #include <sstream>
@@ -16,6 +40,7 @@
 #include "font.h"
 #include "imgui_internal.h"
 #include "implot.h"
+#include "pigpiod_if2.h"
 
 #include <GLFW/glfw3.h>
 
@@ -55,6 +80,19 @@ std::string get_server_address() {
 int main(int argc, char** argv) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
+
+    int pi = pigpio_start("192.168.1.2", "8888");
+    if (pi < 0) {
+        std::cerr << "Failed to connect to pigpio daemon" << std::endl;
+        return 1;
+    }
+
+    set_mode(pi, 17, PI_OUTPUT);
+//    set_servo_pulsewidth(pi, 17, 1500);
+//    hardware_PWM(pi, 12, 50, (1500/20000.0) * 1000000);
+//    hardware_PWM(pi, 13, 50, (1500/20000.0) * 1000000);
+    int bno = i2c_open(pi, 1, 0x28, 0);
+
 
     NFD::Guard nfdGuard;
 
@@ -366,9 +404,9 @@ int main(int argc, char** argv) {
                             int16_t grav_x, grav_y, grav_z;
                             int8_t temp;
                         };
-                        uint8_t data[45];
+                        char data[45];
                     } unscaled{};
-                    std::copy(buffer.begin() + 1, buffer.end(), unscaled.data);
+//                    std::copy(buffer.begin() + 1, buffer.end(), unscaled.data);
 
                     sensor_data.acc = {unscaled.acc_x / 100.0, unscaled.acc_y / 100.0, unscaled.acc_z / 100.0};
                     sensor_data.mag = {unscaled.mag_x / 16.0, unscaled.mag_y / 16.0, unscaled.mag_z / 16.0};
