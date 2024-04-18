@@ -59,23 +59,23 @@ private let progress = OSAllocatedUnfairLock(initialState: Double(0))
 private let eta = OSAllocatedUnfairLock(initialState: Double(0))
 var start_time: Date = Date();
 
-@_cdecl("is_completed")
-public func is_completed() -> Bool {
+//@_cdecl("is_completed")
+public func IsCompleted() -> Bool {
     completed.withLock { completed in return completed }
 }
 
-@_cdecl("get_progress")
-public func get_progress() -> Double {
+//@_cdecl("get_progress")
+public func GetProgress() -> Double {
     progress.withLock { progress in return progress }
 }
 
-@_cdecl("get_eta")
-public func get_eta() -> Double {
+//@_cdecl("get_eta")
+public func GetETA() -> Double {
     eta.withLock { eta in return eta }
 }
 
-@_cdecl("run_photogrammetry_session")
-public func run_photogrammetry_session(imagesPath: UnsafePointer<CChar>) {
+//@_cdecl("run_photogrammetry_session")
+public func RunPhotogrammetrySession(imagesPath: UnsafePointer<CChar>) {
     guard PhotogrammetrySession.isSupported else {
         err("Photogrammetry not supported on this device")
         exit(1)

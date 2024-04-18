@@ -1,61 +1,63 @@
 cmake_minimum_required(VERSION 3.25)
-project(mate)
+project(mate LANGUAGES C CXX Swift)
 
 set(CMAKE_CXX_STANDARD 17)
 
-option(BUILD_CLIENT "Build Client" OFF)
-if (APPLE)
-    set(BUILD_CLIENT ON)
-endif()
-
-option(BUILD_SERVER "Build Server" OFF)
-if (UNIX AND NOT APPLE)
-    set(BUILD_SERVER ON)
-endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0)
 
 include_directories(${GSTREAMER_INCLUDE_DIRS})
 link_directories(${GSTREAMER_LIBRARY_DIRS})
 
-if (BUILD_CLIENT)
-    enable_language(Swift)
+# glfw
+add_subdirectory(lib/glfw)
+find_package(OpenGL REQUIRED)
+include_directories(lib/glfw/include)
 
-    add_executable(client src/client/client.cpp)
+# imgui
+file(GLOB_RECURSE IMGUI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/*.cpp)
+add_library(imgui ${IMGUI_SOURCES})
+include_directories(lib/imgui)
 
-    add_subdirectory(lib/glfw)
-    find_package(OpenGL REQUIRED)
+# implot
+file(GLOB_RECURSE IMPLOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/implot/*.cpp)
+add_library(implot ${IMPLOT_SOURCES})
+include_directories(lib/implot)
 
-    include_directories(lib/glfw/include)
+# pigpio
+file(GLOB_RECURSE PIGPIO_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/pigpio/*.c)
+add_library(pigpio ${PIGPIO_SOURCES})
+include_directories(lib/pigpio)
 
-    file(GLOB_RECURSE IMGUI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/*.cpp)
-    add_library(imgui ${IMGUI_SOURCES})
-    include_directories(lib/imgui)
+# nfd
+add_subdirectory(lib/nativefiledialog-extended)
+include_directories(lib/nativefiledialog-extended/src/include)
 
-    file(GLOB_RECURSE IMPLOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/implot/*.cpp)
-    add_library(implot ${IMPLOT_SOURCES})
-    include_directories(lib/implot)
+# photogrammetry
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/include/photogrammetry-swift.h
+        COMMAND ${CMAKE_Swift_COMPILER} -frontend -typecheck
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/photogrammetry.swift
+            -sdk ${CMAKE_OSX_SYSROOT}
+            -module-name PhotogrammetrySwift
+            -cxx-interoperability-mode=default
+            -emit-clang-header-path ${CMAKE_CURRENT_BINARY_DIR}/include/photogrammetry-swift.h
+        DEPENDS src/photogrammetry.swift
+        COMMENT "Generating Swift header"
+)
+add_custom_target(photogrammetry_header DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/include/photogrammetry-swift.h)
 
-    file(GLOB_RECURSE PIGPIO_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/pigpio/*.c)
-    add_library(pigpio ${PIGPIO_SOURCES})
-    include_directories(lib/pigpio)
+add_library(photogrammetry STATIC src/photogrammetry.swift)
+add_dependencies(photogrammetry photogrammetry_header)
+set_target_properties(photogrammetry PROPERTIES Swift_MODULE_NAME PhotogrammetrySwift)
 
-    add_subdirectory(lib/nativefiledialog-extended)
-    include_directories(lib/nativefiledialog-extended/src/include)
-
-    add_library(photogrammetry src/client/photogrammetry.swift)
-
-    pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
-    target_include_directories(client PRIVATE ${GSTREAMER_APP_INCLUDE_DIRS} src)
-
-    target_link_directories(client PRIVATE ${GSTREAMER_APP_LIBRARY})
-    target_link_libraries(client PRIVATE OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui photogrammetry implot nfd pigpio)
-endif()
-
-if (BUILD_SERVER)
-    add_executable(server src/server/server.cpp)
-    target_include_directories(server PRIVATE src)
-    target_link_libraries(server PRIVATE ${GSTREAMER_LIBRARIES} i2c)
-endif()
-
+add_executable(client
+    src/main.cpp
+    src/camera_stream.cpp
+    src/controls.cpp
+    src/photogrammetry.cpp
+    src/pi.cpp
+)
+target_include_directories(client PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
+target_link_libraries(client PUBLIC OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui implot nfd pigpio photogrammetry)
