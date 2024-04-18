@@ -12,24 +12,33 @@ class Pi {
 private:
     int pi_handle;
 public:
-    explicit Pi(std::string server_address);
+    explicit Pi(const std::string& server_address);
     ~Pi();
 
+    // GPIO Methods
+    int SetGPIOMode(int gpio, int mode) const;
+
     // Shell Methods
-    int Shell(std::string scriptName, std::string arguments);
+    int Shell(const std::string& scriptName, const std::string& arguments) const;
 
     // PWM Methods
-    int SetServoPulseWidth(int gpio, int pulse_width);
+    int SetServoPulseWidth(int gpio, int pulse_width) const;
 
     // I2C Methods
-    int OpenI2C(int bus, int address);
-    int CloseI2C(int handle);
+    int OpenI2C(int bus, int address) const;
+    int CloseI2C(int handle) const;
 
-    int WriteI2CByte(int handle, int byte);
-    int ReadI2CByte(int handle);
+    int WriteI2CByte(int handle, int byte) const;
+    int ReadI2CByte(int handle) const;
 
-    int WriteI2CByteData(int handle, int reg, int byte);
-    int ReadI2CByteData(int handle, int reg);
+    int WriteI2CByteData(int handle, int reg, int byte) const;
+    int ReadI2CByteData(int handle, int reg) const;
+
+    int WriteI2CWordData(int handle, int reg, int word) const;
+    int ReadI2CWordData(int handle, int reg) const;
+
+    int WriteI2CDevice(int handle, char* data, int length) const;
+    int ReadI2CDevice(int handle, char* data, int length) const;
 };
 
 

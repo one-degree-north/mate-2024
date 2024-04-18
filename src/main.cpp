@@ -21,6 +21,7 @@
 #include "camera_stream.h"
 #include "photogrammetry.h"
 #include "controls.h"
+#include "depth_sensor.h"
 
 bool interrupted = false;
 void interrupt(int _signal) { interrupted = true; }
@@ -99,6 +100,7 @@ int main(int argc, char** argv) {
     Controls controls(pi);
     CameraStream cameraStream(pi, server_address);
     Photogrammetry photogrammetry(cameraStream);
+    DepthSensor depthSensor(pi);
 
 
     while (!glfwWindowShouldClose(window) || interrupted) {
@@ -116,6 +118,7 @@ int main(int argc, char** argv) {
         cameraStream.ShowCameraStream();
         photogrammetry.ShowPhotogrammetryWindow();
         controls.ShowControlsWindow();
+        depthSensor.ShowDepthSensorWindow();
 
         ImGui::Render();
 

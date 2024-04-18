@@ -9,10 +9,17 @@
 #include <gst/gst.h>
 #include <gst/app/app.h>
 
+#include <iostream>
+
 #include "camera_stream.h"
 
-CameraStream::CameraStream(Pi &pi, std::string server_address, std::string device) {
+CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std::string& device) : pi(pi) {
     gst_init(nullptr, nullptr);
+
+    if (pi.Shell("run", "gst-launch-1.0 videotestsrc ! jpegenc ! rtpjpegpay ! udpsink host=192.168.1.1 port=6970 &> /dev/null &") < 0) {
+        std::cerr << "Failed to start camera stream" << std::endl;
+        exit(1);
+    }
 
     this->pipeline = gst_parse_launch(
 "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegparse ! jpegdec ! tee name=t "
@@ -20,19 +27,30 @@ CameraStream::CameraStream(Pi &pi, std::string server_address, std::string devic
                 "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink location=images/image%d.jpeg async=false",
     nullptr);
 
+    if (!this->pipeline) {
+        std::cerr << "Failed to create pipeline" << std::endl;
+        exit(1);
+    }
+
     this->sink = this->GetPipelineElement("gui-sink");
 
     gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
+
+    glGenTextures(1, &this->video_texture);
+    glBindTexture(GL_TEXTURE_2D, this->video_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 CameraStream::~CameraStream() {
     gst_element_set_state(this->pipeline, GST_STATE_NULL);
+    pi.Shell("run", "killall gst-launch-1.0");
 
     gst_object_unref(this->pipeline);
     gst_object_unref(this->sink);
 }
 
-GstElement* CameraStream::GetPipelineElement(std::string elementName) {
+GstElement* CameraStream::GetPipelineElement(const std::string& elementName) {
     return gst_bin_get_by_name(GST_BIN(this->pipeline), elementName.c_str());
 }
 
@@ -57,7 +75,7 @@ void CameraStream::ShowCameraStream() {
         ImGui::SetCursorPosY(ImGui::GetFrameHeight() + (windowSize.y - imageSize.y) / 2);
     }
 
-    ImGui::Image((void*)(intptr_t) video_texture, imageSize, ImVec2(0, 0), ImVec2(1, 1));
+    ImGui::Image((void*)(intptr_t) this->video_texture, imageSize, ImVec2(0, 0), ImVec2(1, 1));
 
     ImGui::End();
     ImGui::PopStyleVar();
@@ -80,7 +98,7 @@ void CameraStream::PollCameraStream() {
         gst_buffer_map (videoBuffer, &map, GST_MAP_READ);
 
         glBindTexture(GL_TEXTURE_2D, this->video_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->video_texture, this->video_height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, this->video_width, this->video_height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
         gst_buffer_unmap(videoBuffer, &map);
         gst_sample_unref(videoSample);
     }
