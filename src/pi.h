@@ -25,20 +25,20 @@ public:
     int SetServoPulseWidth(int gpio, int pulse_width) const;
 
     // I2C Methods
-    int OpenI2C(int bus, int address) const;
+    int OpenI2C(int bus, uint8_t address) const;
     int CloseI2C(int handle) const;
 
-    int WriteI2CByte(int handle, int byte) const;
+    int WriteI2CByte(int handle, uint8_t byte) const;
     int ReadI2CByte(int handle) const;
 
-    int WriteI2CByteData(int handle, int reg, int byte) const;
-    int ReadI2CByteData(int handle, int reg) const;
+    int WriteI2CByteData(int handle, uint8_t reg, uint8_t byte) const;
+    int ReadI2CByteData(int handle, uint8_t reg) const;
 
-    int WriteI2CWordData(int handle, int reg, int word) const;
-    int ReadI2CWordData(int handle, int reg) const;
+    int WriteI2CWordData(int handle, uint8_t reg, uint16_t word) const;
+    int ReadI2CWordData(int handle, uint8_t reg) const;
 
-    int WriteI2CDevice(int handle, char* data, int length) const;
-    int ReadI2CDevice(int handle, char* data, int length) const;
+    int WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
+    int ReadI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
 };
 
 

@@ -59,11 +59,11 @@ void Controls::UpdateThrusters() {
 
 
     pi.SetServoPulseWidth(Thruster::FRONT_LEFT, this->DoubleToPulseWidth(front_left));
-    pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, DoubleToPulseWidth(front_right));
-    pi.SetServoPulseWidth(Thruster::REAR_LEFT, DoubleToPulseWidth(back_left));
-    pi.SetServoPulseWidth(Thruster::REAR_RIGHT, DoubleToPulseWidth(back_right));
-    pi.SetServoPulseWidth(Thruster::MID_LEFT, DoubleToPulseWidth(mid_left));
-    pi.SetServoPulseWidth(Thruster::MID_RIGHT, DoubleToPulseWidth(mid_right));
+    pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, this->DoubleToPulseWidth(front_right));
+    pi.SetServoPulseWidth(Thruster::REAR_LEFT, this->DoubleToPulseWidth(back_left));
+    pi.SetServoPulseWidth(Thruster::REAR_RIGHT, this->DoubleToPulseWidth(back_right));
+    pi.SetServoPulseWidth(Thruster::MID_LEFT, this->DoubleToPulseWidth(mid_left));
+    pi.SetServoPulseWidth(Thruster::MID_RIGHT, this->DoubleToPulseWidth(mid_right));
 }
 
 uint16_t Controls::DoubleToPulseWidth(double value) {

@@ -27,6 +27,7 @@ int Pi::Shell(const std::string& scriptName, const std::string& arguments) const
 }
 
 int Pi::SetServoPulseWidth(int gpio, int pulse_width) const {
+
     if (gpio == 12 || gpio == 13) { // Hardware PWM pins
         return hardware_PWM(this->pi_handle, gpio, 50, pulse_width / 20000.0 * 1000000);
     } else {
@@ -34,7 +35,7 @@ int Pi::SetServoPulseWidth(int gpio, int pulse_width) const {
     }
 }
 
-int Pi::OpenI2C(int bus, int address) const {
+int Pi::OpenI2C(int bus, uint8_t address) const {
     return i2c_open(this->pi_handle, bus, address, 0);
 }
 
@@ -42,7 +43,7 @@ int Pi::CloseI2C(int handle) const {
     return i2c_close(this->pi_handle, handle);
 }
 
-int Pi::WriteI2CByte(int handle, int byte) const {
+int Pi::WriteI2CByte(int handle, uint8_t byte) const {
     return i2c_write_byte(this->pi_handle, handle, byte);
 }
 
@@ -50,26 +51,26 @@ int Pi::ReadI2CByte(int handle) const {
     return i2c_read_byte(this->pi_handle, handle);
 }
 
-int Pi::WriteI2CByteData(int handle, int reg, int byte) const {
+int Pi::WriteI2CByteData(int handle, uint8_t reg, uint8_t byte) const {
     return i2c_write_byte_data(this->pi_handle, handle, reg, byte);
 }
 
-int Pi::ReadI2CByteData(int handle, int reg) const {
+int Pi::ReadI2CByteData(int handle, uint8_t reg) const {
     return i2c_read_byte_data(this->pi_handle, handle, reg);
 }
 
-int Pi::WriteI2CWordData(int handle, int reg, int word) const {
+int Pi::WriteI2CWordData(int handle, uint8_t reg, uint16_t word) const {
     return i2c_write_word_data(this->pi_handle, handle, reg, word);
 }
 
-int Pi::ReadI2CWordData(int handle, int reg) const {
+int Pi::ReadI2CWordData(int handle, uint8_t reg) const {
     return i2c_read_word_data(this->pi_handle, handle, reg);
 }
 
-int Pi::WriteI2CDevice(int handle, char *data, int length) const {
-    return i2c_write_device(this->pi_handle, handle, data, length);
+int Pi::WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const {
+    return i2c_write_i2c_block_data(this->pi_handle, handle, reg, data, length);
 }
 
-int Pi::ReadI2CDevice(int handle, char* data, int length) const {
-    return i2c_read_device(this->pi_handle, handle, data, length);
+int Pi::ReadI2CBlockData(int handle, uint8_t reg, char* data, int length) const {
+    return i2c_read_i2c_block_data(this->pi_handle, handle, reg, data, length);
 }

@@ -6,78 +6,70 @@
 #include <imgui.h>
 
 #include "depth_sensor.h"
+#include "pigpio.h"
 
 DepthSensor::DepthSensor(Pi &pi) : pi(pi) {
-    pi.SetGPIOMode(2, 1);
-    pi.SetGPIOMode(3, 1);
+    pi.SetGPIOMode(2, PI_ALT0);
+    pi.SetGPIOMode(3, PI_ALT0);
     this->pressure_sensor_handle = pi.OpenI2C(1, 0x76);
 
     pi.WriteI2CByte(this->pressure_sensor_handle, 0x1E); // Reset
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(11));
 
-    pi.ReadI2CDevice(this->pressure_sensor_handle, (char*) this->CalibrationData, 14);
+    for (int i = 0; i < 7; i++) {
+        this->CalibrationData[i] = pi.ReadI2CWordData(this->pressure_sensor_handle, 0xA0 + 2 * i);
+        this->CalibrationData[i] = ((this->CalibrationData[i] & 0xFF) << 8) | (this->CalibrationData[i] >> 8);
+    }
 
-    for (uint16_t & i : this->CalibrationData)
-        i = ((i & 0xFF) << 8) | (i >> 8);
 
-    this->data_thread = std::thread(&DepthSensor::SensorDataThread, this);
+    for (int i = 0; i < 7; i++)
+        printf("CalibrationData[%d]: %d\n", i, this->CalibrationData[i]);
 }
 
 DepthSensor::~DepthSensor() {
     pi.CloseI2C(this->pressure_sensor_handle);
-    this->reading_sensor_data = false;
-    this->data_thread.join();
 }
 
-void DepthSensor::SensorDataThread() {
-    while (this->reading_sensor_data) {
-        this->ReadSensorData();
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-}
-
-void DepthSensor::ReadSensorData() {
+void DepthSensor::PollSensorData() {
     uint32_t digital_pressure_value = 0, digital_temperature_value = 0;
+    uint8_t value[3];
 
-    pi.WriteI2CByte(this->pressure_sensor_handle, 0x48); // D1 Pressure conversion
-    std::this_thread::sleep_for(std::chrono::milliseconds(12));
-    pi.ReadI2CDevice(this->pressure_sensor_handle, (char*) &digital_pressure_value, 3);
-    digital_pressure_value = ((digital_pressure_value & 0xFF0000) >> 16) | (digital_pressure_value & 0x00FF00) | ((digital_pressure_value & 0x0000FF) << 16);
+    pi.WriteI2CByte(this->pressure_sensor_handle, 0x44); // D1 Pressure conversion
+//    std::this_thread::sleep_for(std::chrono::microseconds(2500));
+    pi.ReadI2CBlockData(this->pressure_sensor_handle, 0x00, (char*) value, 3);
+    digital_pressure_value = (value[0] << 16) | (value[1] << 8) | value[2];
 
-    pi.WriteI2CByte(this->pressure_sensor_handle, 0x58); // D2 Temperature conversion
-    std::this_thread::sleep_for(std::chrono::milliseconds(12));
-    pi.ReadI2CDevice(this->pressure_sensor_handle, (char*) &digital_temperature_value, 3);
-    digital_temperature_value = ((digital_temperature_value & 0xFF0000) >> 16) | (digital_temperature_value & 0x00FF00) | ((digital_temperature_value & 0x0000FF) << 16);
+    pi.WriteI2CByte(this->pressure_sensor_handle, 0x54); // D2 Temperature conversion
+//    std::this_thread::sleep_for(std::chrono::microseconds(2500));
+    pi.ReadI2CBlockData(this->pressure_sensor_handle, 0x00, (char*) value, 3);
+    digital_temperature_value = (value[0] << 16) | (value[1] << 8) | value[2];
 
-    int32_t dT = digital_temperature_value - this->CalibrationData[5] * (1 << 8);
-    int32_t TEMP = 2000 + dT * this->CalibrationData[6] / (1 << 23);
+    int32_t dT = digital_temperature_value - uint32_t(this->CalibrationData[5]) * 256l;
+    int32_t TEMP = 2000l + int64_t(dT) * this->CalibrationData[6] / 8388608LL;
 
-    int64_t OFF = this->CalibrationData[2] * (1 << 16) + (this->CalibrationData[4] * dT) / (1 << 7);
-    int64_t SENS = this->CalibrationData[1] * (1 << 15) + (this->CalibrationData[3] * dT) / (1 << 8);
-    int32_t P = (digital_pressure_value * (SENS / (1 << 21)) - OFF) / (1 << 15);
-
-    this->P = P;
-    this->TEMP = TEMP;
+    int64_t OFF = int64_t(this->CalibrationData[2]) * 65536l + (int64_t(this->CalibrationData[4]) * dT) / 128l;
+    int64_t SENS = int64_t(this->CalibrationData[1]) * 32768l + (int64_t(this->CalibrationData[3]) * dT) / 256l;
+    int32_t P = (digital_pressure_value* SENS / 2097152l - OFF) / (8192l);
 
     int64_t Ti, OFFi, SENSi;
 
-    if (TEMP < 2000) {
-        Ti = 3 * pow(dT, 2) / pow(2, 33);
-        OFFi = 3 * pow((TEMP - 2000), 2) / 2;
-        SENSi = 5 * pow((TEMP - 2000), 2) / 8;
+    if ((TEMP / 100) < 20) {
+        Ti = 3 * int64_t(dT) * int64_t(dT) / 8589934592LL;
+        OFFi = (3 * (TEMP - 2000) * (TEMP - 2000)) / 2;
+        SENSi = (5 * (TEMP - 2000) * (TEMP - 2000)) / 8;
 
-        if (TEMP < -1500) {
-            OFFi += 7 * pow((TEMP + 1500), 2);
-            SENSi += 4 * pow((TEMP + 1500), 2);
+        if ((TEMP / 100) < -15) {
+            OFFi += 7 * (TEMP + 1500l) * (TEMP + 1500l);
+            SENSi += 4 * (TEMP + 1500l) * (TEMP + 1500l);
         }
     } else {
-        Ti = 2 * pow(dT, 2) / pow(2, 37);
-        OFFi = pow((TEMP - 2000), 2) / 16;
+        Ti = 2 * (dT * dT) / 137438953472LL;
+        OFFi = ((TEMP - 2000) * (TEMP - 2000)) / 16;
         SENSi = 0;
     }
 
     this->temperature = (TEMP - Ti) / 100.0;
-    this->pressure = (digital_pressure_value * (SENS - SENSi) / (1 << 21) - OFF + OFFi) / ((1 << 13) * 10.0);
+    this->pressure = (digital_pressure_value * (SENS - SENSi) / 2097152l - OFF + OFFi) / (8192l * 10.0);
 }
 
 void DepthSensor::ShowDepthSensorWindow() {
@@ -85,9 +77,6 @@ void DepthSensor::ShowDepthSensorWindow() {
 
     ImGui::Text("Temperature: %.2f C", this->temperature.load());
     ImGui::Text("Pressure: %.2f mbar", this->pressure.load());
-
-    ImGui::Text("P: %lld", this->P.load());
-    ImGui::Text("TEMP: %lld", this->TEMP.load());
 
     ImGui::End();
 }
