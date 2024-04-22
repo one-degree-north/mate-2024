@@ -3,20 +3,10 @@
 
 #include "pi.h"
 
-#ifndef MATE_CAMERA_H
-#define MATE_CAMERA_H
-
-
+#ifndef MATE_CAMERA_STREAM_H
+#define MATE_CAMERA_STREAM_H
 
 class CameraStream {
-private:
-    Pi &pi;
-    GstElement *pipeline, *sink;
-    GLuint video_texture{};
-    int video_width = 0;
-    int video_height = 0;
-
-    void PollCameraStream();
 public:
     CameraStream(Pi &pi, const std::string& server_address, const std::string& device = "/dev/video0");
     ~CameraStream();
@@ -24,7 +14,15 @@ public:
     GstElement* GetPipelineElement(const std::string& elementName);
     void FlushPipeline();
     void ShowCameraStream();
+private:
+    Pi &pi_;
+    GstElement *pipeline_, *sink_;
+    GLuint video_texture_ = 0;
+    int video_width_ = 0;
+    int video_height_ = 0;
+
+    void PollCameraStream();
 };
 
 
-#endif //MATE_CAMERA_H
+#endif // MATE_CAMERA_STREAM_H

@@ -9,8 +9,6 @@
 
 
 class Pi {
-private:
-    int pi_handle;
 public:
     explicit Pi(const std::string& server_address);
     ~Pi();
@@ -39,6 +37,8 @@ public:
 
     int WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
     int ReadI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
+private:
+    int pi_handle_;
 };
 
 

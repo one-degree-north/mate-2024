@@ -1,12 +1,9 @@
-//
-// Created by Sidharth Maheshwari on 18/4/24.
-//
-
 #include <imgui.h>
 
 #include "controls.h"
+#include "depth_sensor.h"
 
-Controls::Controls(Pi &pi) : pi(pi) {
+Controls::Controls(Pi &pi) : pi_(pi) {
     pi.SetServoPulseWidth(Thruster::FRONT_LEFT, 1500);
     pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, 1500);
     pi.SetServoPulseWidth(Thruster::REAR_LEFT, 1500);
@@ -16,12 +13,17 @@ Controls::Controls(Pi &pi) : pi(pi) {
 }
 
 Controls::~Controls() {
-    pi.SetServoPulseWidth(Thruster::FRONT_LEFT, 1500);
-    pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, 1500);
-    pi.SetServoPulseWidth(Thruster::REAR_LEFT, 1500);
-    pi.SetServoPulseWidth(Thruster::REAR_RIGHT, 1500);
-    pi.SetServoPulseWidth(Thruster::MID_LEFT, 1500);
-    pi.SetServoPulseWidth(Thruster::MID_RIGHT, 1500);
+    if (controls_thread_running_) {
+        controls_thread_running_ = false;
+        controls_thread_.join();
+    }
+
+    pi_.SetServoPulseWidth(Thruster::FRONT_LEFT, 1500);
+    pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, 1500);
+    pi_.SetServoPulseWidth(Thruster::REAR_LEFT, 1500);
+    pi_.SetServoPulseWidth(Thruster::REAR_RIGHT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_LEFT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_RIGHT, 1500);
 }
 
 void Controls::ShowControlsWindow() {
@@ -30,40 +32,68 @@ void Controls::ShowControlsWindow() {
     ImGui::Begin("Controls");
     ImGui::Checkbox("Use Controller", &use_controller);
 
-    bool thrusters_changed = false;
     if (!use_controller) {
-        this->DrawKeyboard();
+        Controls::DrawKeyboard();
 
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.forward, ImGuiKey_W, ImGuiKey_S);
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.side, ImGuiKey_D, ImGuiKey_A);
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.up, ImGuiKey_Space, ImGuiKey_LeftShift);
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.pitch, ImGuiKey_O, ImGuiKey_U);
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.roll, ImGuiKey_L, ImGuiKey_J);
-        thrusters_changed |= this->BindThrusterKey(this->movement_vector.yaw, ImGuiKey_E, ImGuiKey_Q);
+        Controls::BindThrusterKey(this->movement_vector_.forward, ImGuiKey_W, ImGuiKey_S);
+        Controls::BindThrusterKey(this->movement_vector_.side, ImGuiKey_D, ImGuiKey_A);
+        Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
+        Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
+        Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
+        Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
+
+        ImGui::SliderFloat("Speed", reinterpret_cast<float *>(&speed_), 0.0, 30.0);
+
+        ImGui::SliderFloat("Target Depth", reinterpret_cast<float *>(&target_depth_), 0.0, 30.0);
     } else {
         ImGui::Text("todo!");
     }
 
-    if (thrusters_changed) this->UpdateThrusters();
-
     ImGui::End();
 }
 
-void Controls::UpdateThrusters() {
-    double front_right = speed * (this->movement_vector.forward - this->movement_vector.side - this->movement_vector.yaw) / 30.0;
-    double front_left = speed * (this->movement_vector.forward + this->movement_vector.side + this->movement_vector.yaw) / 30.0;
-    double back_left = speed * -(this->movement_vector.forward - this->movement_vector.side + this->movement_vector.yaw) / 30.0;
-    double back_right = speed * -(this->movement_vector.forward + this->movement_vector.side - this->movement_vector.yaw) / 30.0;
-    double mid_left = speed * -(this->movement_vector.up - this->movement_vector.roll) / 20.0;
-    double mid_right = speed * -(this->movement_vector.up + this->movement_vector.roll) / 20.0;
+void Controls::UpdateThrusters(const DepthSensor &depth_sensor) {
+    double front_right = speed_ * (this->movement_vector_.forward - this->movement_vector_.side - this->movement_vector_.yaw) / 30.0;
+    double front_left = speed_ * (this->movement_vector_.forward + this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
+    double back_left = speed_ * -(this->movement_vector_.forward - this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
+    double back_right = speed_ * -(this->movement_vector_.forward + this->movement_vector_.side - this->movement_vector_.yaw) / 30.0;
+    double mid_left = speed_ * -(this->movement_vector_.up - this->movement_vector_.roll) / 20.0;
+    double mid_right = speed_ * -(this->movement_vector_.up + this->movement_vector_.roll) / 20.0;
+
+    if (this->movement_vector_.up == 0) {
+        if (target_depth_ == -1.0) {
+            target_depth_ = depth_sensor.GetDepth();
+            prev_time_ = std::chrono::steady_clock::now();
+        }
+
+        double depth_error = target_depth_ - depth_sensor.GetDepth();
+
+        auto current_time = std::chrono::steady_clock::now();
+        auto dt = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - prev_time_).count();
+        prev_time_ = current_time;
+
+        double p = k_proportional_ * depth_error;
+        double i = k_integral_ * depth_error * dt;
+        double d = k_derivative_ * depth_error / dt;
+
+        int output = (int) std::clamp(p + i + d, 1000.0, 2000.0);
+
+        pi_.SetServoPulseWidth(Thruster::MID_LEFT, output);
+        pi_.SetServoPulseWidth(Thruster::MID_RIGHT, output);
+
+    } else {
+        target_depth_ = -1.0;
+
+        pi_.SetServoPulseWidth(Thruster::MID_LEFT, Controls::DoubleToPulseWidth(mid_left));
+        pi_.SetServoPulseWidth(Thruster::MID_RIGHT, Controls::DoubleToPulseWidth(mid_right));
+    }
 
 
-    pi.SetServoPulseWidth(Thruster::FRONT_LEFT, this->DoubleToPulseWidth(front_left));
-    pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, this->DoubleToPulseWidth(front_right));
-    pi.SetServoPulseWidth(Thruster::REAR_LEFT, this->DoubleToPulseWidth(back_left));
-    pi.SetServoPulseWidth(Thruster::REAR_RIGHT, this->DoubleToPulseWidth(back_right));
-    pi.SetServoPulseWidth(Thruster::MID_LEFT, this->DoubleToPulseWidth(mid_left));
-    pi.SetServoPulseWidth(Thruster::MID_RIGHT, this->DoubleToPulseWidth(mid_right));
+    pi_.SetServoPulseWidth(Thruster::FRONT_LEFT, Controls::DoubleToPulseWidth(front_left));
+    pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, Controls::DoubleToPulseWidth(front_right));
+    pi_.SetServoPulseWidth(Thruster::REAR_LEFT, Controls::DoubleToPulseWidth(back_left));
+    pi_.SetServoPulseWidth(Thruster::REAR_RIGHT, Controls::DoubleToPulseWidth(back_right));
+
 }
 
 uint16_t Controls::DoubleToPulseWidth(double value) {
@@ -116,10 +146,9 @@ void Controls::DrawKeyboard() {
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->PushClipRect(board_min, board_max, true);
-    for (int n = 0; n < IM_ARRAYSIZE(keys_to_display); n++)
-    {
-        const KeyLayoutData* key_data = &keys_to_display[n];
-        ImVec2 key_min = ImVec2(start_pos.x + key_data->Col * key_step.x + key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
+    for (const auto & n : keys_to_display) {
+        const KeyLayoutData* key_data = &n;
+        ImVec2 key_min = ImVec2(start_pos.x + (float) key_data->Col * key_step.x + (float) key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
         ImVec2 key_max = ImVec2(key_min.x + key_size.x, key_min.y + key_size.y);
         draw_list->AddRectFilled(key_min, key_max, IM_COL32(204, 204, 204, 255), key_rounding);
         draw_list->AddRect(key_min, key_max, IM_COL32(24, 24, 24, 255), key_rounding);
@@ -134,4 +163,15 @@ void Controls::DrawKeyboard() {
     }
     draw_list->PopClipRect();
     ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
+}
+
+void Controls::StartControlsThread(const DepthSensor &depth_sensor) {
+    controls_thread_running_ = true;
+    controls_thread_ = std::thread(&Controls::ControlsThreadLoop, this, std::ref(depth_sensor));
+}
+
+void Controls::ControlsThreadLoop(const DepthSensor &depth_sensor) {
+    while (controls_thread_running_) {
+        UpdateThrusters(depth_sensor);
+    }
 }

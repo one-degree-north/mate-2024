@@ -1,8 +1,4 @@
-
 #include <iostream>
-#include <filesystem>
-#include <sstream>
-#include <fstream>
 
 #include "nfd.hpp"
 
@@ -90,17 +86,6 @@ GLFWwindow* initialiseGui() {
     return window;
 }
 
-std::atomic_bool data_thread_running = true;
-void sensor_thread_loop(DepthSensor &depthSensor) {
-    while (data_thread_running) {
-        int64_t start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        depthSensor.PollSensorData();
-        int64_t end_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        printf("PollSensorData took %lld ms\n", end_time - start_time);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
-}
-
 int main(int argc, char** argv) {
     initialiseLibraries();
     GLFWwindow* window = initialiseGui();
@@ -112,10 +97,12 @@ int main(int argc, char** argv) {
     CameraStream cameraStream(pi, server_address);
     Photogrammetry photogrammetry(cameraStream);
     DepthSensor depthSensor(pi);
+
+    depthSensor.StartDepthSensorThread();
+    controls.StartControlsThread(depthSensor);
+
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
-
-    std::thread sensor_thread(sensor_thread_loop, std::ref(depthSensor));
 
     while (!glfwWindowShouldClose(window) && !interrupted) {
         glfwPollEvents();
@@ -142,8 +129,6 @@ int main(int argc, char** argv) {
 
         glfwSwapBuffers(window);
     }
-    data_thread_running = false;
-    sensor_thread.join();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

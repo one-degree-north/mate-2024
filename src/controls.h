@@ -1,18 +1,24 @@
-//
-// Created by Sidharth Maheshwari on 18/4/24.
-//
-
 #include <imgui.h>
 
-#include "pi.h"
+#include <thread>
 
-#ifndef MATE_THRUSTER_CONTROL_H
-#define MATE_THRUSTER_CONTROL_H
+#include "pi.h"
+#include "depth_sensor.h"
+
+#ifndef MATE_CONTROLS_H
+#define MATE_CONTROLS_H
 
 
 class Controls {
+public:
+    explicit Controls(Pi &pi);
+    ~Controls();
+
+    void ShowControlsWindow();
+    void UpdateThrusters(const DepthSensor &depth_sensor);
+    void StartControlsThread(const DepthSensor &depth_sensor);
 private:
-    Pi &pi;
+    Pi &pi_;
 
     enum Thruster {
         FRONT_RIGHT = 0,
@@ -23,7 +29,11 @@ private:
         MID_RIGHT = 5
     };
 
-    double speed = 0.0;
+    double speed_ = 0.0;
+    double target_depth_ = -1.0;
+
+    std::atomic<double> k_proportional_ = 2, k_integral_ = 0.5, k_derivative_ = 2;
+    std::chrono::time_point<std::chrono::steady_clock> prev_time_;
 
     struct {
         double forward = 0.0;
@@ -32,19 +42,16 @@ private:
         double pitch = 0.0;
         double roll = 0.0;
         double yaw = 0.0;
-    } movement_vector; // from -1 to 1
+    } movement_vector_; // from -1 to 1
 
-    void UpdateThrusters();
-    uint16_t DoubleToPulseWidth(double value);
-    void DrawKeyboard();
-    bool BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negative);
+    std::thread controls_thread_;
+    std::atomic_bool controls_thread_running_ = false;
+    void ControlsThreadLoop(const DepthSensor &depth_sensor);
 
-public:
-    explicit Controls(Pi &pi);
-    ~Controls();
-
-    void ShowControlsWindow();
+    static uint16_t DoubleToPulseWidth(double value);
+    static void DrawKeyboard();
+    static bool BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negative);
 };
 
 
-#endif //MATE_THRUSTER_CONTROL_H
+#endif // MATE_CONTROLS_H
