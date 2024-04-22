@@ -73,7 +73,7 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor) {
         prev_time_ = current_time;
 
         double p = k_proportional_ * depth_error;
-        double i = k_integral_ * depth_error * dt;
+        double i = k_integral_ * ;
         double d = k_derivative_ * depth_error / dt;
 
         int output = (int) std::clamp(p + i + d, 1000.0, 2000.0);
