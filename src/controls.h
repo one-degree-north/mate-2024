@@ -35,16 +35,14 @@ private:
     std::atomic<double> k_proportional_ = 2, k_integral_ = 0.5, k_derivative_ = 2;
     std::chrono::time_point<std::chrono::steady_clock> prev_time_;
 
-    struct MovementVector {
+    struct {
         double forward = 0.0;
         double side = 0.0;
         double up = 0.0;
         double pitch = 0.0;
         double roll = 0.0;
         double yaw = 0.0;
-    };
-
-    std::atomic<MovementVector> movement_vector_; // from -1 to 1
+    } movement_vector_;
 
     std::thread controls_thread_;
     std::atomic_bool controls_thread_running_ = false;
