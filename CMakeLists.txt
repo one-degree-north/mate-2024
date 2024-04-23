@@ -59,6 +59,9 @@ add_executable(client
     src/photogrammetry.cpp
     src/pi.cpp
     src/depth_sensor.cpp
+    src/orientation_sensor.cpp
+        src/pid.cpp
+        src/pid.h
 )
 target_include_directories(client PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_link_libraries(client PUBLIC OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui implot nfd pigpio photogrammetry)

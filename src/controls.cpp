@@ -2,6 +2,7 @@
 
 #include "controls.h"
 #include "depth_sensor.h"
+#include "orientation_sensor.h"
 
 Controls::Controls(Pi &pi) : pi_(pi) {
     pi.SetServoPulseWidth(Thruster::FRONT_LEFT, 1500);
@@ -37,14 +38,42 @@ void Controls::ShowControlsWindow() {
 
         Controls::BindThrusterKey(this->movement_vector_.forward, ImGuiKey_W, ImGuiKey_S);
         Controls::BindThrusterKey(this->movement_vector_.side, ImGuiKey_D, ImGuiKey_A);
-        Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
-        Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
-        Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
-        Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
+//        Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
+        if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.01);
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.01);
 
-        ImGui::SliderFloat("Speed", reinterpret_cast<float *>(&speed_), 0.0, 30.0);
+        if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 0.01);
+        if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 0.01);
 
-        ImGui::SliderFloat("Target Depth", reinterpret_cast<float *>(&target_depth_), 0.0, 30.0);
+        if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 0.01);
+        if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 0.01);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 0.01);
+        if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 0.01);
+
+//        Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
+//        Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
+//        Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
+
+        ImGui::SliderFloat("Speed", reinterpret_cast<float *>(&this->speed_), 0.0, 30.0);
+
+        ImGui::SliderFloat("Target Depth", reinterpret_cast<float *>(&this->target_depth_), 0.0, 30.0);
+
+        if (ImGui::Button("Reset")) {
+            this->depth_pid_.Reset();
+            this->roll_pid_.Reset();
+            this->pitch_pid_.Reset();
+            this->yaw_pid_.Reset();
+        }
+
+        ImGui::BeginCombo("PID Config", nullptr);
+
+        if (ImGui::Selectable("Depth")) { this->depth_pid_.DrawPIDConfigWindow(); }
+        if (ImGui::Selectable("Roll")) { this->roll_pid_.DrawPIDConfigWindow(); }
+        if (ImGui::Selectable("Pitch")) { this->pitch_pid_.DrawPIDConfigWindow(); }
+        if (ImGui::Selectable("Yaw")) { this->yaw_pid_.DrawPIDConfigWindow(); }
+
+        ImGui::EndCombo();
     } else {
         ImGui::Text("todo!");
     }
@@ -52,7 +81,12 @@ void Controls::ShowControlsWindow() {
     ImGui::End();
 }
 
-void Controls::UpdateThrusters(const DepthSensor &depth_sensor) {
+void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
+    this->movement_vector_.up = this->depth_pid_.Update(depth_sensor.GetDepth());
+    this->movement_vector_.yaw = this->yaw_pid_.Update(orientation_sensor.GetOrientationYaw());
+    this->movement_vector_.roll = this->roll_pid_.Update(orientation_sensor.GetOrientationRoll());
+    this->movement_vector_.pitch = this->pitch_pid_.Update(orientation_sensor.GetOrientationPitch());
+
     double front_right = speed_ * (this->movement_vector_.forward - this->movement_vector_.side - this->movement_vector_.yaw) / 30.0;
     double front_left = speed_ * (this->movement_vector_.forward + this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
     double back_left = speed_ * -(this->movement_vector_.forward - this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
@@ -60,35 +94,8 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor) {
     double mid_left = speed_ * -(this->movement_vector_.up - this->movement_vector_.roll) / 20.0;
     double mid_right = speed_ * -(this->movement_vector_.up + this->movement_vector_.roll) / 20.0;
 
-    if (this->movement_vector_.up == 0) {
-        if (target_depth_ == -1.0) {
-            target_depth_ = depth_sensor.GetDepth();
-            prev_time_ = std::chrono::steady_clock::now();
-        }
-
-        double depth_error = target_depth_ - depth_sensor.GetDepth();
-
-        auto current_time = std::chrono::steady_clock::now();
-        auto dt = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - prev_time_).count();
-        prev_time_ = current_time;
-
-        double p = k_proportional_ * depth_error;
-        double i = k_integral_ * depth_error * dt;
-        double d = k_derivative_ * depth_error / dt;
-
-        int output = (int) std::clamp(p + i + d, 1000.0, 2000.0);
-
-        pi_.SetServoPulseWidth(Thruster::MID_LEFT, output);
-        pi_.SetServoPulseWidth(Thruster::MID_RIGHT, output);
-
-    } else {
-        target_depth_ = -1.0;
-
-        pi_.SetServoPulseWidth(Thruster::MID_LEFT, Controls::DoubleToPulseWidth(mid_left));
-        pi_.SetServoPulseWidth(Thruster::MID_RIGHT, Controls::DoubleToPulseWidth(mid_right));
-    }
-
-
+    pi_.SetServoPulseWidth(Thruster::MID_LEFT, Controls::DoubleToPulseWidth(mid_left));
+    pi_.SetServoPulseWidth(Thruster::MID_RIGHT, Controls::DoubleToPulseWidth(mid_right));
     pi_.SetServoPulseWidth(Thruster::FRONT_LEFT, Controls::DoubleToPulseWidth(front_left));
     pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, Controls::DoubleToPulseWidth(front_right));
     pi_.SetServoPulseWidth(Thruster::REAR_LEFT, Controls::DoubleToPulseWidth(back_left));
@@ -165,13 +172,15 @@ void Controls::DrawKeyboard() {
     ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
 }
 
-void Controls::StartControlsThread(const DepthSensor &depth_sensor) {
+void Controls::StartControlsThread(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
     controls_thread_running_ = true;
-    controls_thread_ = std::thread(&Controls::ControlsThreadLoop, this, std::ref(depth_sensor));
+    controls_thread_ = std::thread(&Controls::ControlsThreadLoop, this, std::ref(depth_sensor), std::ref(orientation_sensor));
 }
 
-void Controls::ControlsThreadLoop(const DepthSensor &depth_sensor) {
+void Controls::ControlsThreadLoop(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
     while (controls_thread_running_) {
-        UpdateThrusters(depth_sensor);
+        UpdateThrusters(depth_sensor, orientation_sensor);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }

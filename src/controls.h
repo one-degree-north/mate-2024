@@ -4,6 +4,8 @@
 
 #include "pi.h"
 #include "depth_sensor.h"
+#include "pid.h"
+#include "orientation_sensor.h"
 
 #ifndef MATE_CONTROLS_H
 #define MATE_CONTROLS_H
@@ -15,8 +17,8 @@ public:
     ~Controls();
 
     void ShowControlsWindow();
-    void UpdateThrusters(const DepthSensor &depth_sensor);
-    void StartControlsThread(const DepthSensor &depth_sensor);
+    void UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &sensor);
+    void StartControlsThread(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor);
 private:
     Pi &pi_;
 
@@ -32,8 +34,11 @@ private:
     std::atomic<double> speed_ = 0.0;
     double target_depth_ = -1.0;
 
-    std::atomic<double> k_proportional_ = 2, k_integral_ = 0.5, k_derivative_ = 2;
-    std::chrono::time_point<std::chrono::steady_clock> prev_time_;
+    PID depth_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
+    PID roll_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
+    PID pitch_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
+    PID yaw_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
+
 
     struct {
         double forward = 0.0;
@@ -46,7 +51,7 @@ private:
 
     std::thread controls_thread_;
     std::atomic_bool controls_thread_running_ = false;
-    void ControlsThreadLoop(const DepthSensor &depth_sensor);
+    void ControlsThreadLoop(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor);
 
     static uint16_t DoubleToPulseWidth(double value);
     static void DrawKeyboard();

@@ -18,6 +18,7 @@
 #include "photogrammetry.h"
 #include "controls.h"
 #include "depth_sensor.h"
+#include "orientation_sensor.h"
 
 bool interrupted = false;
 void interrupt(int _signal) { interrupted = true; }
@@ -97,9 +98,11 @@ int main(int argc, char** argv) {
     CameraStream cameraStream(pi, server_address);
     Photogrammetry photogrammetry(cameraStream);
     DepthSensor depthSensor(pi);
+    OrientationSensor orientationSensor(pi);
 
     depthSensor.StartDepthSensorThread();
-    controls.StartControlsThread(depthSensor);
+    orientationSensor.StartOrientationSensorThread();
+    controls.StartControlsThread(depthSensor, orientationSensor);
 
     signal(SIGINT, interrupt);
     signal(SIGTERM, interrupt);
@@ -119,6 +122,7 @@ int main(int argc, char** argv) {
         photogrammetry.ShowPhotogrammetryWindow();
         controls.ShowControlsWindow();
         depthSensor.ShowDepthSensorWindow();
+        orientationSensor.ShowOrientationSensorWindow();
 
         ImGui::Render();
 

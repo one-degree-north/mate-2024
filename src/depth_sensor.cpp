@@ -79,6 +79,7 @@ void DepthSensor::ShowDepthSensorWindow() const {
 
     ImGui::Text("Temperature: %.2f C", this->temperature_.load());
     ImGui::Text("Pressure: %.2f mbar", this->pressure_.load());
+    ImGui::Text("Depth: %.2f m", this->GetDepth());
 
     ImGui::End();
 }
@@ -95,6 +96,7 @@ void DepthSensor::StartDepthSensorThread() {
 void DepthSensor::DepthSensorThreadLoop() {
     while (this->depth_sensor_thread_running_) {
         PollSensorData();
+
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
