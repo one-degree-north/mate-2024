@@ -14,3 +14,7 @@
 [submodule "doxygen-awesome-css"]
     path = lib/doxygen-awesome-css
     url = https://github.com/jothepro/doxygen-awesome-css
+
+[submodule "nativefiledialog-extended"]
+    path = lib/nativefiledialog-extended
+    url = https://github.com/btzy/nativefiledialog-extended.git
