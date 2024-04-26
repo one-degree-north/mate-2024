@@ -106,6 +106,12 @@ if (BUILD_DOCS)
 
         set(DOXYGEN_PROJECT_NAME "Blue Lobster")
         set(DOXYGEN_PROJECT_BRIEF "Code for the MATE 2024 ROV Competition")
+        set(DOXYGEN_PROJECT_LOGO "${CMAKE_CURRENT_SOURCE_DIR}/doc/logo.png")
+
+        set(DOXYGEN_DOT_IMAGE_FORMAT svg)
+        set(DOXYGEN_INTERACTIVE_SVG YES)
+        set(DOXYGEN_DOT_TRANSPARENT YES)
+        
 
         doxygen_add_docs(
             docs
