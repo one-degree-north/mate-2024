@@ -10,15 +10,35 @@ pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0)
 include_directories(${GSTREAMER_INCLUDE_DIRS})
 link_directories(${GSTREAMER_LIBRARY_DIRS})
 
+#include(FetchContent)
+#FetchContent_Declare(
+#        OpenXR
+#        URL_HASH MD5=924a94a2da0b5ef8e82154c623d88644
+#        URL https://github.com/KhronosGroup/OpenXR-SDK-Source/archive/refs/tags/release-1.0.34.zip
+#        SOURCE_DIR
+#        openxr
+#)
+#FetchContent_MakeAvailable(OpenXR)
+
 # glfw
+set(GLFW_BUILD_DOCS OFF)
+set(GLFW_BUILD_EXAMPLES OFF)
+set(GLFW_BUILD_TESTS OFF)
 add_subdirectory(lib/glfw)
 find_package(OpenGL REQUIRED)
 include_directories(lib/glfw/include)
 
 # imgui
-file(GLOB_RECURSE IMGUI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui/*.cpp)
-add_library(imgui ${IMGUI_SOURCES})
-include_directories(lib/imgui)
+add_library(imgui
+        lib/imgui/imgui.cpp
+        lib/imgui/imgui_demo.cpp
+        lib/imgui/imgui_draw.cpp
+        lib/imgui/imgui_widgets.cpp
+        lib/imgui/imgui_tables.cpp
+        lib/imgui/backends/imgui_impl_glfw.cpp
+        lib/imgui/backends/imgui_impl_opengl3.cpp
+)
+include_directories(lib/imgui lib/imgui/backends)
 
 # implot
 file(GLOB_RECURSE IMPLOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/implot/*.cpp)
@@ -31,7 +51,7 @@ add_library(pigpio ${PIGPIO_SOURCES})
 include_directories(lib/pigpio)
 
 # nfd
-add_subdirectory(lib/nativefiledialog-extended)
+add_subdirectory(lib/nativefiledialog-extended EXCLUDE_FROM_ALL)
 include_directories(lib/nativefiledialog-extended/src/include)
 
 # photogrammetry
@@ -60,8 +80,38 @@ add_executable(client
     src/pi.cpp
     src/depth_sensor.cpp
     src/orientation_sensor.cpp
-        src/pid.cpp
-        src/pid.h
+    src/pid.cpp
 )
 target_include_directories(client PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_link_libraries(client PUBLIC OpenGL::GL ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} glfw imgui implot nfd pigpio photogrammetry)
+
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+
+    set(DOXYGEN_GENERATE_HTML YES)
+    set(DOXYGEN_HTML_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/docs)
+
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE ${CMAKE_CURRENT_SOURCE_DIR}/README.md)
+
+    set(DOXYGEN_GENERATE_TREEVIEW YES)
+    set(DOXYGEN_DISABLE_INDEX NO)
+    set(DOXYGEN_FULL_SIDEBAR NO)
+    set(DOXYGEN_HTML_EXTRA_STYLESHEET
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/doxygen-awesome-css/doxygen-awesome.css
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/doxygen-awesome-css/doxygen-awesome-sidebar-only.css)
+    set(DOXYGEN_HTML_COLORSTYLE DARK)
+
+    set(DOXYGEN_EXTRACT_ALL YES)
+
+    set(DOXYGEN_PROJECT_NAME "Blue Lobster")
+    set(DOXYGEN_PROJECT_BRIEF "Code for the MATE 2024 ROV Competition")
+
+    doxygen_add_docs(
+        docs
+        ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/doc ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+        COMMENT "Generating with Doxygen"
+    )
+else (DOXYGEN_FOUND)
+    message("Doxygen need to be installed to generate the doxygen documentation")
+endif (DOXYGEN_FOUND)
+

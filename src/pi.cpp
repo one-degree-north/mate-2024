@@ -1,6 +1,3 @@
-//
-// Created by Sidharth Maheshwari on 17/4/24.
-//
 #include "pigpiod_if2.h"
 
 #include <iostream>
@@ -8,10 +5,9 @@
 #include "pi.h"
 
 Pi::Pi(const std::string& server_address) {
-    if ((this->pi_handle_ = pigpio_start(server_address.c_str(), "8888")) < 0) {
-        std::cerr << "Failed to connect to pigpiod" << std::endl;
-        exit(1);
-    }
+    this->pi_handle_ = pigpio_start(server_address.c_str(), "8888");
+    if (pi_handle_ < 0)
+        throw std::runtime_error("Failed to connect to pigpiod");
 }
 
 Pi::~Pi() {

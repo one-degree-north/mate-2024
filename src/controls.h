@@ -22,17 +22,23 @@ public:
 private:
     Pi &pi_;
 
+    bool use_controller_ = false;
+
     enum Thruster {
         FRONT_RIGHT = 0,
         FRONT_LEFT = 1,
         REAR_RIGHT = 2,
         REAR_LEFT = 3,
-        MID_LEFT = 4,
-        MID_RIGHT = 5
+        MID_FRONT_RIGHT = 4,
+        MID_FRONT_LEFT = 5,
+        MID_BACK_RIGHT = 6,
+        MID_BACK_LEFT = 7
     };
 
     std::atomic<double> speed_ = 0.0;
     double target_depth_ = -1.0;
+
+    bool pid_enabled_ = false;
 
     PID depth_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
     PID roll_pid_{0.1, 0.1, 0.1, -1.0, 1.0};

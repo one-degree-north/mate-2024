@@ -87,7 +87,11 @@ GLFWwindow* initialiseGui() {
     return window;
 }
 
-int main(int argc, char** argv) {
+/**
+ * Main function
+ * @return A status code of 0
+ */
+int main() {
     initialiseLibraries();
     GLFWwindow* window = initialiseGui();
 

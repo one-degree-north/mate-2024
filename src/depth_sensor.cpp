@@ -1,3 +1,4 @@
+#include <iostream>
 #include <thread>
 
 #include <imgui.h>
@@ -9,6 +10,11 @@ DepthSensor::DepthSensor(Pi &pi) : pi_(pi) {
     pi.SetGPIOMode(2, PI_ALT0);
     pi.SetGPIOMode(3, PI_ALT0);
     this->pressure_sensor_handle_ = pi.OpenI2C(1, 0x76);
+
+    if (pressure_sensor_handle_ < 0) {
+        std::cerr << "Failed to open pressure sensor I2C handle" << std::endl;
+        exit(1);
+    }
 
     pi.WriteI2CByte(this->pressure_sensor_handle_, 0x1E); // Reset
     std::this_thread::sleep_for(std::chrono::milliseconds(11));

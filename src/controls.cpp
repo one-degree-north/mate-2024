@@ -9,8 +9,10 @@ Controls::Controls(Pi &pi) : pi_(pi) {
     pi.SetServoPulseWidth(Thruster::FRONT_RIGHT, 1500);
     pi.SetServoPulseWidth(Thruster::REAR_LEFT, 1500);
     pi.SetServoPulseWidth(Thruster::REAR_RIGHT, 1500);
-    pi.SetServoPulseWidth(Thruster::MID_LEFT, 1500);
-    pi.SetServoPulseWidth(Thruster::MID_RIGHT, 1500);
+    pi.SetServoPulseWidth(Thruster::MID_FRONT_RIGHT, 1500);
+    pi.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, 1500);
+    pi.SetServoPulseWidth(Thruster::MID_BACK_RIGHT, 1500);
+    pi.SetServoPulseWidth(Thruster::MID_BACK_LEFT, 1500);
 }
 
 Controls::~Controls() {
@@ -23,37 +25,45 @@ Controls::~Controls() {
     pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, 1500);
     pi_.SetServoPulseWidth(Thruster::REAR_LEFT, 1500);
     pi_.SetServoPulseWidth(Thruster::REAR_RIGHT, 1500);
-    pi_.SetServoPulseWidth(Thruster::MID_LEFT, 1500);
-    pi_.SetServoPulseWidth(Thruster::MID_RIGHT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_FRONT_RIGHT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_BACK_RIGHT, 1500);
+    pi_.SetServoPulseWidth(Thruster::MID_BACK_LEFT, 1500);
 }
 
 void Controls::ShowControlsWindow() {
-    static bool use_controller = false;
-
     ImGui::Begin("Controls");
-    ImGui::Checkbox("Use Controller", &use_controller);
 
-    if (!use_controller) {
+    if (ImGui::Checkbox("PID Enabled", &pid_enabled_) && pid_enabled_) {
+        this->depth_pid_.Reset();
+        this->roll_pid_.Reset();
+        this->pitch_pid_.Reset();
+        this->yaw_pid_.Reset();
+    }
+
+    ImGui::Checkbox("Use Controller", &use_controller_);
+
+    if (!use_controller_) {
         Controls::DrawKeyboard();
 
         Controls::BindThrusterKey(this->movement_vector_.forward, ImGuiKey_W, ImGuiKey_S);
         Controls::BindThrusterKey(this->movement_vector_.side, ImGuiKey_D, ImGuiKey_A);
-//        Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
-        if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.01);
-        if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.01);
 
-        if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 0.01);
-        if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 0.01);
-
-        if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 0.01);
-        if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 0.01);
-
-        if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 0.01);
-        if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 0.01);
-
-//        Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
-//        Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
-//        Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
+        if (pid_enabled_) {
+            Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
+            Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
+            Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
+            Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
+        } else {
+            if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 0.01);
+        }
 
         ImGui::SliderFloat("Speed", reinterpret_cast<float *>(&this->speed_), 0.0, 30.0);
 
@@ -82,25 +92,30 @@ void Controls::ShowControlsWindow() {
 }
 
 void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
-    this->movement_vector_.up = this->depth_pid_.Update(depth_sensor.GetDepth());
-    this->movement_vector_.yaw = this->yaw_pid_.Update(orientation_sensor.GetOrientationYaw());
-    this->movement_vector_.roll = this->roll_pid_.Update(orientation_sensor.GetOrientationRoll());
-    this->movement_vector_.pitch = this->pitch_pid_.Update(orientation_sensor.GetOrientationPitch());
+    if (pid_enabled_) {
+        movement_vector_.up = depth_pid_.Update(depth_sensor.GetDepth());
+        movement_vector_.yaw = yaw_pid_.Update(orientation_sensor.GetOrientationYaw());
+        movement_vector_.roll = roll_pid_.Update(orientation_sensor.GetOrientationRoll());
+        movement_vector_.pitch = pitch_pid_.Update(orientation_sensor.GetOrientationPitch());
+    }
 
-    double front_right = speed_ * (this->movement_vector_.forward - this->movement_vector_.side - this->movement_vector_.yaw) / 30.0;
-    double front_left = speed_ * (this->movement_vector_.forward + this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
-    double back_left = speed_ * -(this->movement_vector_.forward - this->movement_vector_.side + this->movement_vector_.yaw) / 30.0;
-    double back_right = speed_ * -(this->movement_vector_.forward + this->movement_vector_.side - this->movement_vector_.yaw) / 30.0;
-    double mid_left = speed_ * -(this->movement_vector_.up - this->movement_vector_.roll) / 20.0;
-    double mid_right = speed_ * -(this->movement_vector_.up + this->movement_vector_.roll) / 20.0;
+    double front_right = speed_ * (movement_vector_.forward - movement_vector_.side - movement_vector_.yaw) / 30.0;
+    double front_left = speed_ * (movement_vector_.forward + movement_vector_.side + movement_vector_.yaw) / 30.0;
+    double back_left = speed_ * -(movement_vector_.forward - movement_vector_.side + movement_vector_.yaw) / 30.0;
+    double back_right = speed_ * -(movement_vector_.forward + movement_vector_.side - movement_vector_.yaw) / 30.0;
+    double mid_front_left = speed_ * -(movement_vector_.up - movement_vector_.roll + movement_vector_.pitch) / 30.0;
+    double mid_front_right = speed_ * -(movement_vector_.up + movement_vector_.roll + movement_vector_.pitch) / 30.0;
+    double mid_back_left = speed_ * -(movement_vector_.up - movement_vector_.roll - movement_vector_.pitch) / 30.0;
+    double mid_back_right = speed_ * -(movement_vector_.up + movement_vector_.roll - movement_vector_.pitch) / 30.0;
 
-    pi_.SetServoPulseWidth(Thruster::MID_LEFT, Controls::DoubleToPulseWidth(mid_left));
-    pi_.SetServoPulseWidth(Thruster::MID_RIGHT, Controls::DoubleToPulseWidth(mid_right));
+    pi_.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, Controls::DoubleToPulseWidth(mid_front_left));
+    pi_.SetServoPulseWidth(Thruster::MID_FRONT_RIGHT, Controls::DoubleToPulseWidth(mid_front_right));
+    pi_.SetServoPulseWidth(Thruster::MID_BACK_LEFT, Controls::DoubleToPulseWidth(mid_back_left));
+    pi_.SetServoPulseWidth(Thruster::MID_BACK_RIGHT, Controls::DoubleToPulseWidth(mid_back_right));
     pi_.SetServoPulseWidth(Thruster::FRONT_LEFT, Controls::DoubleToPulseWidth(front_left));
     pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, Controls::DoubleToPulseWidth(front_right));
     pi_.SetServoPulseWidth(Thruster::REAR_LEFT, Controls::DoubleToPulseWidth(back_left));
     pi_.SetServoPulseWidth(Thruster::REAR_RIGHT, Controls::DoubleToPulseWidth(back_right));
-
 }
 
 uint16_t Controls::DoubleToPulseWidth(double value) {
