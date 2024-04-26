@@ -25,12 +25,11 @@ jobs:
     - name: Build Docs
       run: cmake --build ${{github.workspace}}/build --target docs
 
-    - name: Upload to Github Pagwes
+    - name: Upload Docs Artifact
       uses: actions/upload-pages-artifact@v3.0.1
       with:
         path: ${{github.workspace}}/build/docs
-          
 
-    
-
-
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
