@@ -2,4 +2,5 @@
 build
 cmake-build-debug
 cmake-build-debug-remote
-.DS_Store
+
+**/.DS_Store
