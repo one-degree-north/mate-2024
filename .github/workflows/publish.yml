@@ -23,7 +23,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build -DBUILD_CLIENT=OFF -DBUILD_DOCS=ON
 
     - name: Build Docs
-      run: cmake --build ${{github.workspace}}/build docs
+      run: cmake --build ${{github.workspace}}/build --target docs
 
     - name: Upload to Github Pagwes
       uses: actions/upload-pages-artifact@v3.0.1
