@@ -1,12 +1,8 @@
 #include <GLFW/glfw3.h>
-
 #include <imgui.h>
-
 #include <gst/gst.h>
 #include <gst/app/app.h>
-
 #include <iostream>
-
 #include "camera_stream.h"
 
 CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std::string& device) : pi_(pi) {
@@ -16,11 +12,13 @@ CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std:
     if (exit_code < 0)
         throw std::runtime_error("Failed to start camera stream");
 
-    this->pipeline_ = gst_parse_launch(
-"udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
-                "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink_ drop=true sync=false "
-                "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink_ location=images/image%d.jpeg async=false",
-    nullptr);
+    std::string pipeline_description = "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t ";
+
+    for (int i = 0; i < num_devices; ++i) {
+        pipeline_description += "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! jpegenc ! udpsink host=destination_ip_" + std::to_string(i) + " port=destination_port_" + std::to_string(i) + " ";
+    }
+
+    this->pipeline_ = gst_parse_launch(pipeline_description.c_str(), nullptr);
 
     if (!this->pipeline_) {
         std::cerr << "Failed to create pipeline_" << std::endl;

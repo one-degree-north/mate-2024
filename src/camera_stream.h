@@ -1,6 +1,6 @@
 #include <GLFW/glfw3.h>
 #include <gst/gstelement.h>
-
+#include <string>
 #include "pi.h"
 
 #ifndef MATE_CAMERA_STREAM_H
