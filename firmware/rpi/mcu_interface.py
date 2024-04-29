@@ -1,8 +1,8 @@
 # mcu_interface communicates with the microcontroller
 from dataclasses import dataclass
 import serial, struct, threading, time
-# import RPi.GPIO as GPIO
-# import pigpio
+import RPi.GPIO as GPIO
+import pigpio
 
 HEADER = 0xa7
 FOOTER = 0x7a
@@ -69,6 +69,39 @@ class Packet:
     
     def __repr__(self):
         return f"{self.cmd} {self.param} {self.len} {self.data} {self.curr_size} "
+
+class RPIInterface:
+    def __init__(self, debug=False):
+        self.t_pins = [20, 21, 19, 13, 6, 5, 18, 16]
+        self.debug = debug
+        self.pi = pigpio.pi()
+        self.pi.set_mode()
+        for pin in self.t_pins:
+            self.pi.set_mode(pin, pigpio.OUTPUT)
+            # self.pi.set_servo_pulsewidth()
+            # self.pi.set_PWM_frequency(pin, 50)
+
+    def set_thrusters(self, thrusts):
+        micro_thrusts = []
+        for i in range(len(thrusts)):
+            micro_thrusts.append(self.float_to_micro(thrusts[i]))
+        if self.debug:
+            print(f"setting thrusts {thrusts}, with {micro_thrusts}")  
+        for i in len(self.t_pins):
+            self.pi.set_servo_pulsewidth(self.t_pins[i], micro_thrusts[i])
+
+    def set_servos(self, vals):
+        print(f"setting thrusts {thrusts}")
+        # self._write_packet(0x28, 0x2F, struct.pack(">HH", *vals))
+
+
+    def float_to_micro(self, thrust):
+        new_thrust = int(1500 + 500*thrust)
+        if new_thrust > 2000:
+            new_thrust = 2000
+        if new_thrust < 1000:
+            new_thrust = 1000
+        return int(new_thrust)
 
 class MCUInterface:
     def __init__(self, serial_port="/dev/ttyACM0", stop_event=None, use_stop_event=False, debug=False, write_delay=0.05, bno_data=None, data_lock=None):
@@ -360,25 +393,47 @@ class ArduinoInterface:
         self._write_packet(0x40, struct.pack("<H", val))
 
 if __name__ == "__main__":
-    interface = ArduinoInterface("/dev/ttyACM0", debug=True)
+    interface = RPIInterface(debug=True)
     while True:
         val = input("input type > ")
         if val == "all":
             t = float(input("thrust: "))
-            thrusts = [t, t, t, t, t, t]
+            thrusts = [t, t, t, t, t, t, t, t]
             interface.set_thrusters(thrusts)
         if val == "st":
             t = float(input("microseconds: "))
             thruster = int(input("thruster: "))
-            thrusts = [0]*6
+            thrusts = [0]*8
             thrusts[thruster] = t
             interface.set_thrusters(thrusts)
-        if val == "grip":
-            t = float(input("microseconds: "))
-            interface.set_grip_servo(t)
-        if val == "rot":
-            t = float(input("microseconds: "))
-            interface.set_rotate_servo(t)
+        # if val == "grip":
+        #     t = float(input("microseconds: "))
+        #     interface.set_grip_servo(t)
+        # if val == "rot":
+        #     t = float(input("microseconds: "))
+        #     interface.set_rotate_servo(t)
+
+
+    # interface = ArduinoInterface("/dev/ttyACM0", debug=True)
+    # while True:
+    #     val = input("input type > ")
+    #     if val == "all":
+    #         t = float(input("thrust: "))
+    #         thrusts = [t, t, t, t, t, t]
+    #         interface.set_thrusters(thrusts)
+    #     if val == "st":
+    #         t = float(input("microseconds: "))
+    #         thruster = int(input("thruster: "))
+    #         thrusts = [0]*6
+    #         thrusts[thruster] = t
+    #         interface.set_thrusters(thrusts)
+    #     if val == "grip":
+    #         t = float(input("microseconds: "))
+    #         interface.set_grip_servo(t)
+    #     if val == "rot":
+    #         t = float(input("microseconds: "))
+    #         interface.set_rotate_servo(t)
+
     # data_lock=threading.Lock()
     # interface = MCUInterface("/dev/ttyACM0", debug=True, bno_data=bno_data,data_lock=data_lock)
     # interface.start()
