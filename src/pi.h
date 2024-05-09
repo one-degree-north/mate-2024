@@ -37,6 +37,19 @@ public:
 
     int WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
     int ReadI2CBlockData(int handle, uint8_t reg, char* data, int length) const;
+
+    int ZipI2C(int handle, char *data, int length) const;
+
+    enum I2C_ZIP_COMMAND {
+        END = 0x00,
+        ESCAPE = 0x01,
+        ON = 0x02,
+        OFF = 0x03,
+        ADDRESS = 0x04,
+        FLAGS = 0x05,
+        READ = 0x06,
+        WRITE = 0x07
+    };
 private:
     int pi_handle_;
 };

@@ -62,6 +62,10 @@ int Pi::ReadI2CWordData(int handle, uint8_t reg) const {
     return i2c_read_word_data(this->pi_handle_, handle, reg);
 }
 
+int Pi::ZipI2C(int handle, char* data, int length) const {
+    return i2c_zip(this->pi_handle_, handle, data, length, nullptr, 0);
+}
+
 int Pi::WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const {
     return i2c_write_i2c_block_data(this->pi_handle_, handle, reg, data, length);
 }

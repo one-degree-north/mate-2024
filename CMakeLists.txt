@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 option(BUILD_CLIENT "Build the client" ON)
 option(BUILD_DOCS "Build the docs" ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 if (BUILD_CLIENT)
     if (APPLE)
         enable_language(Swift)
@@ -25,7 +32,7 @@ if (BUILD_CLIENT)
         include_directories(lib/glfw/include)
 
         # imgui
-        add_library(imgui
+        add_library(imgui STATIC
                 lib/imgui/imgui.cpp
                 lib/imgui/imgui_demo.cpp
                 lib/imgui/imgui_draw.cpp
@@ -38,12 +45,12 @@ if (BUILD_CLIENT)
 
         # implot
         file(GLOB_RECURSE IMPLOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/implot/*.cpp)
-        add_library(implot ${IMPLOT_SOURCES})
+        add_library(implot STATIC ${IMPLOT_SOURCES})
         include_directories(lib/implot)
 
         # pigpio
         file(GLOB_RECURSE PIGPIO_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/pigpio/*.c)
-        add_library(pigpio ${PIGPIO_SOURCES})
+        add_library(pigpio STATIC ${PIGPIO_SOURCES})
         include_directories(lib/pigpio)
 
         # nfd

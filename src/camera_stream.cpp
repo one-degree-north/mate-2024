@@ -8,17 +8,15 @@
 CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std::string& device) : pi_(pi) {
     gst_init(nullptr, nullptr);
 
-    int exit_code = pi.Shell("run", "gst-launch-1.0 v4l2src device=/dev/video0 ! jpegenc ! rtpjpegpay ! udpsink host=192.168.1.1 port=6970 &> /dev/null &");
-    if (exit_code < 0)
-        throw std::runtime_error("Failed to start camera stream");
+//    int exit_code = pi.Shell("run", "gst-launch-1.0 v4l2src device=/dev/video0 ! jpegenc ! rtpjpegpay ! udpsink host=192.168.1.1 port=6970 &> /dev/null &");
+//    if (exit_code < 0)
+//        throw std::runtime_error("Failed to start camera stream");
 
-    std::string pipeline_description = "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t ";
-
-    for (int i = 0; i < num_devices; ++i) {
-        pipeline_description += "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! jpegenc ! udpsink host=destination_ip_" + std::to_string(i) + " port=destination_port_" + std::to_string(i) + " ";
-    }
-
-    this->pipeline_ = gst_parse_launch(pipeline_description.c_str(), nullptr);
+    this->pipeline_ = gst_parse_launch(
+            "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
+            "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink_ drop=true sync=false "
+            "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink_ location=images/image%d.jpeg async=false",
+            nullptr);
 
     if (!this->pipeline_) {
         std::cerr << "Failed to create pipeline_" << std::endl;
@@ -37,7 +35,7 @@ CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std:
 
 CameraStream::~CameraStream() {
     gst_element_set_state(this->pipeline_, GST_STATE_NULL);
-    pi_.Shell("run", "killall gst-launch-1.0");
+//    pi_.Shell("run", "killall gst-launch-1.0");
 
     gst_object_unref(this->pipeline_);
     gst_object_unref(this->sink_);

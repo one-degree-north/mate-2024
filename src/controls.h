@@ -25,18 +25,18 @@ private:
     bool use_controller_ = false;
 
     enum Thruster {
-        FRONT_RIGHT = 0,
-        FRONT_LEFT = 1,
-        REAR_RIGHT = 2,
-        REAR_LEFT = 3,
-        MID_FRONT_RIGHT = 4,
-        MID_FRONT_LEFT = 5,
-        MID_BACK_RIGHT = 6,
-        MID_BACK_LEFT = 7
+        FRONT_RIGHT = 3,
+        FRONT_LEFT = 4,
+        REAR_RIGHT = 0,         // Reversed
+        REAR_LEFT = 2,          // Reversed
+        MID_FRONT_RIGHT = 7,    // Reversed
+        MID_FRONT_LEFT = 6,     // Reversed
+        MID_BACK_RIGHT = 1,     // Reversed
+        MID_BACK_LEFT = 5       // Reversed
     };
 
-    std::atomic<double> speed_ = 0.0;
-    double target_depth_ = -1.0;
+    std::atomic<float> speed_ = 0.0;
+    float target_depth_ = -1.0;
 
     bool pid_enabled_ = false;
 
@@ -59,9 +59,11 @@ private:
     std::atomic_bool controls_thread_running_ = false;
     void ControlsThreadLoop(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor);
 
-    static uint16_t DoubleToPulseWidth(double value);
+    static uint32_t DoubleToFeatherWingOnTime(double value);
     static void DrawKeyboard();
     static bool BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negative);
+
+    int feather_wing_handle_;
 };
 
 
