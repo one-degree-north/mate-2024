@@ -3,6 +3,7 @@
 //
 
 #include <string>
+#include <vector>
 
 #ifndef MATE_PI_H
 #define MATE_PI_H
@@ -40,15 +41,15 @@ public:
 
     int ZipI2C(int handle, char *data, int length) const;
 
-    enum I2C_ZIP_COMMAND {
-        END = 0x00,
-        ESCAPE = 0x01,
-        ON = 0x02,
-        OFF = 0x03,
-        ADDRESS = 0x04,
-        FLAGS = 0x05,
-        READ = 0x06,
-        WRITE = 0x07
+    class I2CZipCommand {
+    public:
+        std::vector<uint8_t> commands;
+
+        I2CZipCommand();
+        ~I2CZipCommand() = default;
+
+        void WriteByte(uint8_t reg, uint8_t data);
+        int Send(Pi &pi, int handle);
     };
 private:
     int pi_handle_;

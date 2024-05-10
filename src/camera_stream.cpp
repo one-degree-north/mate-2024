@@ -13,7 +13,7 @@ CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std:
 //        throw std::runtime_error("Failed to start camera stream");
 
     this->pipeline_ = gst_parse_launch(
-            "udpsrc port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
+            "udpsrc multicast-group=224.1.1.1 port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
             "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink_ drop=true sync=false "
             "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink_ location=images/image%d.jpeg async=false",
             nullptr);

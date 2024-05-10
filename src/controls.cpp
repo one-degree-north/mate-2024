@@ -22,10 +22,12 @@ Controls::Controls(Pi &pi) : pi_(pi) {
         thrust = Controls::DoubleToFeatherWingOnTime(0) << 16;
     }
 
-//    int res = pi_.WriteI2CBlockData(feather_wing_handle_, 0x06, data.feather_wing_data, 32);
+//    Pi::I2CZipCommand cmd;
     for (int i = 0; i < 32; i++)
-        pi_.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_data[i]);
-//    std::cout << res << std::endl;
+        pi.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_data[i]);
+//        cmd.WriteByte(0x06 + i, data.feather_wing_data[i]);
+
+//    cmd.Send(pi, feather_wing_handle_);
 }
 
 Controls::~Controls() {
@@ -43,9 +45,12 @@ Controls::~Controls() {
         thrust = Controls::DoubleToFeatherWingOnTime(0) << 16;
     }
 
-//    int res = pi_.WriteI2CBlockData(feather_wing_handle_, 0x06, data.feather_wing_data, 32);
+    Pi::I2CZipCommand cmd;
     for (int i = 0; i < 32; i++)
         pi_.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_data[i]);
+//        cmd.WriteByte(0x06 + i, data.feather_wing_data[i]);
+
+//    cmd.Send(pi_, feather_wing_handle_);
 
     pi_.CloseI2C(feather_wing_handle_);
 }
@@ -153,7 +158,13 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const Orientatio
 
 
 //    int res = pi_.WriteI2CBlockData(feather_wing_handle_, 0x06, data.feather_wing_data, 32);
+//    Pi::I2CZipCommand cmd;
     for (int i = 0; i < 32; i++)
+//        cmd.WriteByte(0x06 + i, data.feather_wing_register_data[i]);
+//
+//    int a = cmd.Send(pi_, feather_wing_handle_);
+//    if (a != 0) std::cout << a << std::endl;
+
         pi_.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_register_data[i]);
 
 //    pi_.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, Controls::DoubleToPulseWidth(mid_front_left));
@@ -168,7 +179,7 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const Orientatio
 
 uint32_t Controls::DoubleToFeatherWingOnTime(double value) {
 //    return std::clamp((uint16_t) (value + 1) * 500 + 1000, 1000, 2000);
-    return std::clamp((uint16_t) (value * 102) + 307, 205, 409); // from (-1, 1) to (205, 409) (out of 4096, 1ms to 2ms @ 50hz)
+    return std::clamp((int16_t) (value * 102) + 307, 205, 409); // from (-1, 1) to (205, 409) (out of 4096, 1ms to 2ms @ 50hz)
 }
 
 bool Controls::BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negative) {

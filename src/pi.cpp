@@ -73,3 +73,21 @@ int Pi::WriteI2CBlockData(int handle, uint8_t reg, char* data, int length) const
 int Pi::ReadI2CBlockData(int handle, uint8_t reg, char* data, int length) const {
     return i2c_read_i2c_block_data(this->pi_handle_, handle, reg, data, length);
 }
+
+Pi::I2CZipCommand::I2CZipCommand() {
+    commands = std::vector<uint8_t>();
+}
+
+void Pi::I2CZipCommand::WriteByte(uint8_t reg, uint8_t data) {
+    commands.insert(commands.begin(), {0x04, reg, 0x07, 0x01, data});
+}
+
+
+int Pi::I2CZipCommand::Send(Pi &pi, int handle) {
+    commands.push_back(0x00);
+    return pi.ZipI2C(handle, (char*) commands.data(), commands.size());
+}
+
+
+
+
