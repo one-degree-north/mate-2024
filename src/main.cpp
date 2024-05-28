@@ -120,7 +120,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+        ImGui::DockSpaceOverViewport();
 
         cameraStream.ShowCameraStream();
         photogrammetry.ShowPhotogrammetryWindow();
