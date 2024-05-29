@@ -24,6 +24,15 @@ private:
 
     bool use_controller_ = false;
 
+    enum Servo{
+        ROTATION = 12,
+        GRIP = 13
+    }
+    struct {
+        uint16_t rotation = 1500;
+        uint16_t grip = 1500;
+    } servo_values_;
+
     enum Thruster {
         FRONT_RIGHT = 3,
         FRONT_LEFT = 4,
@@ -62,7 +71,7 @@ private:
     static uint32_t DoubleToFeatherWingOnTime(double value);
     static void DrawKeyboard();
     static bool BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negative);
-
+    static bool BindServoKey(double &axis, ImGuiKey positive, ImGuiKey negative);
     int feather_wing_handle_;
 };
 

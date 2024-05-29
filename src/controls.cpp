@@ -70,9 +70,11 @@ void Controls::ShowControlsWindow() {
     if (!use_controller_) {
         Controls::DrawKeyboard();
 
+        
         Controls::BindThrusterKey(this->movement_vector_.forward, ImGuiKey_W, ImGuiKey_S);
         Controls::BindThrusterKey(this->movement_vector_.side, ImGuiKey_D, ImGuiKey_A);
-
+        Controls::BindThrusterKey(this->servo_values_.grip, ImGuiKey_R, ImGuiKey_T);
+        Controls::BindThrusterKey(this->servo_values_.rotation, ImGuiKey_F, ImGuiKey_G);
         if (!pid_enabled_) {
             Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
             Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
@@ -88,7 +90,6 @@ void Controls::ShowControlsWindow() {
             if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 0.01);
             if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 0.01);
         }
-
         ImGui::Text("Movement Vector");
         ImGui::Text("Forward: %f", movement_vector_.up);
 
@@ -119,6 +120,11 @@ void Controls::ShowControlsWindow() {
     }
 
     ImGui::End();
+}
+
+void Controls::UpdateServos(){
+    pi_.SetServoPulseWidth(Servo::rotation, servo_values_.rotation);
+    pi_.SetServoPulseWidth(Servo::grip, servo_values_.grip);
 }
 
 void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
@@ -205,6 +211,23 @@ bool Controls::BindThrusterKey(double &axis, ImGuiKey positive, ImGuiKey negativ
     return changed;
 }
 
+bool Controls::BindServoKey(double &axis, ImGuiKey positive, ImGuiKey negative) {
+    bool changed = false;
+
+    if (ImGui::IsKeyPressed(positive, false)) {
+        axis += 100;
+        changed = true;
+    }
+
+    if (ImGui::IsKeyPressed(negative, false)) {
+        axis -= 100;
+        changed = true;
+    }
+
+    axis = std::clamp(axis, 1000, 2000);
+    return changed;
+}
+
 void Controls::DrawKeyboard() {
     const ImVec2 key_size = ImVec2(35.0f, 35.0f);
     const float  key_rounding = 3.0f;
@@ -255,7 +278,7 @@ void Controls::StartControlsThread(const DepthSensor &depth_sensor, const Orient
 void Controls::ControlsThreadLoop(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
     while (controls_thread_running_) {
         UpdateThrusters(depth_sensor, orientation_sensor);
-
+        UpdateServos();
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
