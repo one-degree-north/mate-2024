@@ -45,6 +45,11 @@ private:
     PID pitch_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
     PID yaw_pid_{0.1, 0.1, 0.1, -1.0, 1.0};
 
+    std::atomic<float> claw_rotation_ = 0.0;
+    std::atomic<float> claw_open_ = 0.0;
+
+ 
+
 
     struct {
         double forward = 0.0;

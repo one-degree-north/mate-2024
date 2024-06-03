@@ -5,7 +5,7 @@
 #include <iostream>
 #include "camera_stream.h"
 
-CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std::string& device) : pi_(pi) {
+CameraStream::CameraStream(Pi &pi, int port) : pi_(pi) {
     gst_init(nullptr, nullptr);
 
 //    int exit_code = pi.Shell("run", "gst-launch-1.0 v4l2src device=/dev/video0 ! jpegenc ! rtpjpegpay ! udpsink host=192.168.1.1 port=6970 &> /dev/null &");
@@ -13,9 +13,9 @@ CameraStream::CameraStream(Pi &pi, const std::string& server_address, const std:
 //        throw std::runtime_error("Failed to start camera stream");
 
     this->pipeline_ = gst_parse_launch(
-            "udpsrc multicast-group=224.1.1.1 port=6970 ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
+            ("udpsrc port=" + std::to_string(port) + " ! application/x-rtp,encoding-name=JPEG ! rtpjpegdepay ! jpegdec ! tee name=t "
             "t. ! queue leaky=downstream ! videoconvert ! video/x-raw,format=RGB ! appsink name=gui-sink_ drop=true sync=false "
-            "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink_ location=images/image%d.jpeg async=false",
+            "t. ! queue leaky=downstream ! valve name=image-valve drop=true ! videocrop name=image-crop bottom=0 ! videorate skip-to-first=true max-closing-segment-duplication-duration=0 ! capsfilter caps-change-mode=immediate name=image-rate-filter caps=video/x-raw,framerate=1/1 ! jpegenc ! multifilesink name=image-sink_ location=images/image%d.jpeg async=false").c_str(),
             nullptr);
 
     if (!this->pipeline_) {

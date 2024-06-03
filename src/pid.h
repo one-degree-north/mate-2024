@@ -19,6 +19,7 @@ public:
 private:
     std::atomic<double> k_proportional_, k_integral_, k_derivative_, max_, min_, target_ = 0.0;
     double integral_ = 0.0;
+    std::atomic<double> last_val_, last_error_, last_p_, last_i_, last_d_;
     std::chrono::time_point<std::chrono::steady_clock> prev_time_;
 };
 

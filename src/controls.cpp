@@ -104,14 +104,36 @@ void Controls::ShowControlsWindow() {
             this->yaw_pid_.Reset();
         }
 
-//        ImGui::BeginCombo("PID Config", nullptr);
-//
-//        if (ImGui::Selectable("Depth")) { this->depth_pid_.DrawPIDConfigWindow(); }
-//        if (ImGui::Selectable("Roll")) { this->roll_pid_.DrawPIDConfigWindow(); }
-//        if (ImGui::Selectable("Pitch")) { this->pitch_pid_.DrawPIDConfigWindow(); }
-//        if (ImGui::Selectable("Yaw")) { this->yaw_pid_.DrawPIDConfigWindow(); }
-//
-//        ImGui::EndCombo();
+        ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
+        ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -1.0, 1.0);
+
+        const char* items[] = {"Depth", "Roll", "Pitch", "Yaw"};
+        static int curr_item = 0;
+        if (ImGui::BeginCombo("PID Config", items[curr_item])) {
+
+            for (int i = 0; i < 4; i++)
+                if (ImGui::Selectable(items[i]))
+                    curr_item = i;
+
+            ImGui::EndCombo();
+        }
+
+        switch (curr_item) {
+            case 0:
+                this->depth_pid_.DrawPIDConfigWindow();
+                break;
+            case 1:
+                this->roll_pid_.DrawPIDConfigWindow();
+                break;
+            case 2:
+                this->pitch_pid_.DrawPIDConfigWindow();
+                break;
+            case 3:
+                this->yaw_pid_.DrawPIDConfigWindow();
+                break;
+            default:
+                break;
+        }
 
 
     } else {
@@ -166,6 +188,9 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const Orientatio
 //    if (a != 0) std::cout << a << std::endl;
 
         pi_.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_register_data[i]);
+
+    pi_.SetServoPulseWidth(12, std::clamp((int) ((claw_rotation_ + 1) * 1000 + 500),  500, 2500));
+    pi_.SetServoPulseWidth(13, std::clamp((int) ((claw_open_ + 1) * 1000 + 500),  500, 2500));
 
 //    pi_.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, Controls::DoubleToPulseWidth(mid_front_left));
 //    pi_.SetServoPulseWidth(Thruster::MID_FRONT_RIGHT, Controls::DoubleToPulseWidth(mid_front_right));

@@ -99,7 +99,8 @@ int main() {
 
     Pi pi(server_address);
     Controls controls(pi);
-    CameraStream cameraStream(pi, server_address);
+    CameraStream cameraStream(pi, 6970);
+    CameraStream cameraStream2(pi, 6969);
     Photogrammetry photogrammetry(cameraStream);
     DepthSensor depthSensor(pi);
     OrientationSensor orientationSensor(pi);
@@ -123,6 +124,7 @@ int main() {
         ImGui::DockSpaceOverViewport();
 
         cameraStream.ShowCameraStream();
+        cameraStream2.ShowCameraStream();
         photogrammetry.ShowPhotogrammetryWindow();
         controls.ShowControlsWindow();
         depthSensor.ShowDepthSensorWindow();

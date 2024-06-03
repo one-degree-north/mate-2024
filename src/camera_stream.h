@@ -8,7 +8,7 @@
 
 class CameraStream {
 public:
-    CameraStream(Pi &pi, const std::string& server_address, const std::string& device = "/dev/video0");
+    CameraStream(Pi &pi, int port);
     ~CameraStream();
 
     GstElement* GetPipelineElement(const std::string& elementName);
