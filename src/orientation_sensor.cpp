@@ -32,7 +32,7 @@ void OrientationSensor::ShowOrientationSensorWindow() const {
     ImGui::Text("Yaw: %f", orientation_yaw_.load());
     ImGui::Text("Roll: %f", orientation_roll_.load());
     ImGui::Text("Pitch: %f", orientation_pitch_.load());
-
+    ImGui::PlotLines(orientation_yaw)
     ImGui::End();
 }
 
@@ -53,6 +53,14 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         orientation_roll_ = buff.roll / 16.0;
         orientation_pitch_ = buff.pitch / 16.0;
 
+        for (int i = 0; i < 9999; i++){
+            orientation_yaw_graph_[i] = orientation_yaw_graph_[i+1];
+            orientation_roll_graph_[i] = orientation_roll_graph_[i+1];
+            orientation_pitch_graph_[i] = orientation_pitch_graph_[i+1];
+        }
+        orientation_yaw_graph_[9999] = orientation_yaw_;
+        orientation_roll_graph_[9999] = orientation_roll_;
+        orientation_pitch_graph_[9999] = orientation_pitch_;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

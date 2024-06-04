@@ -22,7 +22,7 @@ private:
     int orientation_sensor_handle_;
 
     std::atomic<double> orientation_yaw_ = 0, orientation_roll_ = 0, orientation_pitch_ = 0;
-
+    std::atomic<std::array<double,10000>> orientation_yaw_graph_, orientation_roll_graph_, orientation_pitch_graph_;
     std::atomic_bool orientation_sensor_thread_running_ = false;
     std::thread orientation_sensor_thread_;
     void OrientationSensorThreadLoop();
