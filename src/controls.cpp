@@ -144,22 +144,39 @@ void Controls::ShowControlsWindow() {
 }
 
 void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
+    double front_left;
+    double front_right;
+    double back_left;
+    double back_right;
+    double mid_front_left;
+    double mid_front_right;
+    double mid_back_left;
+    double mid_back_right;
     if (pid_enabled_) {
         movement_vector_.up = depth_pid_.Update(depth_sensor.GetDepth());
         movement_vector_.yaw = yaw_pid_.Update(orientation_sensor.GetOrientationYaw());
         movement_vector_.roll = roll_pid_.Update(orientation_sensor.GetOrientationRoll());
         movement_vector_.pitch = pitch_pid_.Update(orientation_sensor.GetOrientationPitch());
+
+        front_left = (speed_ * (movement_vector_.forward + movement_vector_.side) + movement_vector_.yaw) / 30.0;
+        front_right = (speed_ * (movement_vector_.forward - movement_vector_.side) - movement_vector_.yaw) / 30.0;
+        back_left = -(speed_ * (movement_vector_.forward - movement_vector_.side) + movement_vector_.yaw) / 30.0;
+        back_right = -(speed_ * (movement_vector_.forward + movement_vector_.side) - movement_vector_.yaw) / 30.0;
+        mid_front_left = -(speed_ * (movement_vector_.up) - movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_front_right = -(speed_ * (movement_vector_.up) + movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_back_left = -(speed_ * (movement_vector_.up) - movement_vector_.roll - movement_vector_.pitch) / 30.0;
+        mid_back_right = -(speed_ * (movement_vector_.up) + movement_vector_.roll - movement_vector_.pitch) / 30.0;
     }
-
-    double front_left = speed_ * (movement_vector_.forward + movement_vector_.side + movement_vector_.yaw) / 30.0;
-    double front_right = speed_ * (movement_vector_.forward - movement_vector_.side - movement_vector_.yaw) / 30.0;
-    double back_left = -speed_ * (movement_vector_.forward - movement_vector_.side + movement_vector_.yaw) / 30.0;
-    double back_right = -speed_ * (movement_vector_.forward + movement_vector_.side - movement_vector_.yaw) / 30.0;
-    double mid_front_left = -speed_ * (movement_vector_.up - movement_vector_.roll + movement_vector_.pitch) / 30.0;
-    double mid_front_right = -speed_ * (movement_vector_.up + movement_vector_.roll + movement_vector_.pitch) / 30.0;
-    double mid_back_left = -speed_ * (movement_vector_.up - movement_vector_.roll - movement_vector_.pitch) / 30.0;
-    double mid_back_right = -speed_ * (movement_vector_.up + movement_vector_.roll - movement_vector_.pitch) / 30.0;
-
+    else{
+        front_left = speed_ * (movement_vector_.forward + movement_vector_.side + movement_vector_.yaw) / 30.0;
+        front_right = speed_ * (movement_vector_.forward - movement_vector_.side - movement_vector_.yaw) / 30.0;
+        back_left = -speed_ * (movement_vector_.forward - movement_vector_.side + movement_vector_.yaw) / 30.0;
+        back_right = -speed_ * (movement_vector_.forward + movement_vector_.side - movement_vector_.yaw) / 30.0;
+        mid_front_left = -speed_ * (movement_vector_.up - movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_front_right = -speed_ * (movement_vector_.up + movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_back_left = -speed_ * (movement_vector_.up - movement_vector_.roll - movement_vector_.pitch) / 30.0;
+        mid_back_right = -speed_ * (movement_vector_.up + movement_vector_.roll - movement_vector_.pitch) / 30.0;
+    }
     union {
         uint32_t thrusts[8];
         char feather_wing_register_data[32];

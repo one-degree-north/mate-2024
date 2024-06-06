@@ -32,6 +32,7 @@ double PID::Update(double current_value) {
 
     auto current_time = std::chrono::steady_clock::now();
     double dt = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - prev_time_).count() / 1.0e9;
+
     prev_time_ = current_time;
 
     integral_ += error * dt;
@@ -43,7 +44,9 @@ double PID::Update(double current_value) {
     float d = k_derivative_ * error / dt;
     last_d_ = d;
 
-    last_val_ = std::clamp(p + i + d, min_.load(), max_.load());
+    float linear_val = p+i+d;   // thruster output force is ~proportional to speed^3
+    linear_val = linear_val * linear_val * linear_val;
+    last_val_ = std::clamp(linear_val, min_.load(), max_.load());
     return last_val_;
 }
 
@@ -59,8 +62,7 @@ void PID::DrawPIDConfigWindow() {
     ImGui::SliderFloat("P", reinterpret_cast<float *>(&this->k_proportional_), 0.0, 1.0);
     ImGui::SliderFloat("I", reinterpret_cast<float *>(&this->k_integral_), 0.0, 1.0);
     ImGui::SliderFloat("D", reinterpret_cast<float *>(&this->k_derivative_), 0.0, 1.0);
-    ImGui::SliderFloat("Max", reinterpret_cast<float *>(&this->max_), -1, 1);
-    ImGui::SliderFloat("Min", reinterpret_cast<float *>(&this->min_), -1, 1);
+
     ImGui::Text("PID Output: %f", last_val_.load());
     ImGui::Text("PID Error: %f", last_error_.load());
     ImGui::Text("P: %f", last_p_.load());

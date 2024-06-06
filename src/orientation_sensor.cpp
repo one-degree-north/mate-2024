@@ -26,7 +26,7 @@ OrientationSensor::~OrientationSensor() {
     pi_.CloseI2C(orientation_sensor_handle_);
 }
 
-void OrientationSensor::ShowOrientationSensorWindow() const {
+void OrientationSensor::ShowOrientationSensorWindow() {
     ImGui::Begin("Orientation Sensor");
 
     ImGui::Text("Yaw: %f", orientation_yaw_.load());
@@ -39,6 +39,13 @@ void OrientationSensor::ShowOrientationSensorWindow() const {
     for (int i = 0; i < 22; i++){
         ImGui::Text("calib: %u, %u", i, actual_calib_data[i]);
     }
+    if (ImGui::Button("plot yaw"))plot_yaw=!plot_yaw;
+    if (ImGui::Button("plot pitch"))plot_pitch=!plot_pitch;
+    if (ImGui::Button("plot roll"))plot_roll=!plot_roll;
+
+    if (plot_yaw) ImGui::PlotLines("yaw: ", yaw_graph, 10000);
+    if (plot_pitch) ImGui::PlotLines("pitch: ", pitch_graph, 10000);
+    if (plot_roll) ImGui::PlotLines("roll: ", roll_graph, 10000);
     // ImGui::PlotLines("orientation: ", orientation_yaw_graph_, 10000);
     ImGui::End();
 }
@@ -69,6 +76,25 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         mag_calib_ = (calib_data_ && 0b00000011);
 
         pi_.ReadI2CBlockData(orientation_sensor_handle_, 0x55, actual_calib_data, 22);
+        
+        if (plot_yaw){
+            for (int i = 0; i < 9999; i++){
+                yaw_graph[i+1] = yaw_graph[i];
+            }
+            yaw_graph[0] = orientation_yaw_;
+        }
+        if (plot_roll){
+            for (int i = 0; i < 9999; i++){
+                roll_graph[i+1] = roll_graph[i];
+            }
+            roll_graph[0] = orientation_roll_;
+        }
+        if (plot_pitch){
+            for (int i = 0; i < 9999; i++){
+                pitch_graph[i+1] = pitch_graph[i];
+            }
+            pitch_graph[0] = orientation_pitch_;
+        }
         // for (int i = 0; i < 9999; i++){
         //     orientation_yaw_graph_[i] = orientation_yaw_graph_[i+1];
         //     orientation_roll_graph_[i] = orientation_roll_graph_[i+1];
@@ -77,6 +103,7 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         // orientation_yaw_graph_[9999] = orientation_yaw_;
         // orientation_roll_graph_[9999] = orientation_roll_;
         // orientation_pitch_graph_[9999] = orientation_pitch_;
+
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

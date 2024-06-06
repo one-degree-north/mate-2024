@@ -80,12 +80,14 @@ void DepthSensor::PollSensorData() {
     this->pressure_ = (digital_pressure_value * (SENS - SENSi) / 2097152l - OFF + OFFi) / (8192l * 10.0);
 }
 
-void DepthSensor::ShowDepthSensorWindow() const {
+void DepthSensor::ShowDepthSensorWindow() {
     ImGui::Begin("Depth Sensor");
 
     ImGui::Text("Temperature: %.2f C", this->temperature_.load());
     ImGui::Text("Pressure: %.2f mbar", this->pressure_.load());
     ImGui::Text("Depth: %.2f m", this->GetDepth());
+    if (ImGui::Button("plot depth")) plot_depth=!plot_depth;
+    if (plot_depth)ImGui::PlotLines("depth: ", depth_graph, 10000);
 
     ImGui::End();
 }
@@ -102,7 +104,12 @@ void DepthSensor::StartDepthSensorThread() {
 void DepthSensor::DepthSensorThreadLoop() {
     while (this->depth_sensor_thread_running_) {
         PollSensorData();
-
+        if (plot_depth){
+            for (int i = 0; i < 9999; i++){
+                depth_graph[i+1] = depth_graph[i];
+            }
+            depth_graph[0] = GetDepth();
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }

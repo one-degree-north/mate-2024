@@ -11,7 +11,7 @@ public:
     explicit OrientationSensor(Pi &pi);
     ~OrientationSensor();
 
-    void ShowOrientationSensorWindow() const;
+    void ShowOrientationSensorWindow();
     void StartOrientationSensorThread();
 
     double GetOrientationYaw() const;
@@ -23,9 +23,10 @@ private:
     char actual_calib_data[22];
     std::atomic<uint8_t> calib_data_ = 0, sys_calib_ = 0, gyr_calib_=0, acc_calib_=0, mag_calib_=0;
     std::atomic<double> orientation_yaw_ = 0, orientation_roll_ = 0, orientation_pitch_ = 0;
-    float orientation_yaw_graph_[10000], orientation_roll_graph_[10000], orientation_pitch_graph_[10000];
+    float yaw_graph[10000], roll_graph[10000], pitch_graph[10000];
     std::atomic_bool orientation_sensor_thread_running_ = false;
     std::thread orientation_sensor_thread_;
+    std::atomic_bool plot_yaw=false, plot_roll=false, plot_pitch=false;
     void OrientationSensorThreadLoop();
 };
 
