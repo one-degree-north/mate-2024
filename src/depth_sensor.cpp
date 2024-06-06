@@ -91,7 +91,7 @@ void DepthSensor::ShowDepthSensorWindow() const {
 }
 
 double DepthSensor::GetDepth() const {
-    return (this->pressure_.load() * 100.0 - 101300.0) / (1029 * 9.80665);
+    return -1*(this->pressure_.load() * 100.0 - 101300.0) / (1029 * 9.80665);
 }
 
 void DepthSensor::StartDepthSensorThread() {

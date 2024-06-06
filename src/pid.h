@@ -5,7 +5,7 @@
 
 class PID {
 public:
-    PID(double k_proportional, double k_integral, double k_derivative, double min, double max);
+    PID(float k_proportional, float k_integral, float k_derivative, float min, float max, bool eul);
     ~PID();
 
     double Update(double current_value);
@@ -17,8 +17,9 @@ public:
 
     void Reset();
 private:
-    std::atomic<double> k_proportional_, k_integral_, k_derivative_, max_, min_, target_ = 0.0;
+    std::atomic<float> k_proportional_, k_integral_, k_derivative_, max_, min_, target_ = 0.0;
     double integral_ = 0.0;
+    bool eul_ = false;
     std::atomic<double> last_val_, last_error_, last_p_, last_i_, last_d_;
     std::chrono::time_point<std::chrono::steady_clock> prev_time_;
 };

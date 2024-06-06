@@ -32,7 +32,14 @@ void OrientationSensor::ShowOrientationSensorWindow() const {
     ImGui::Text("Yaw: %f", orientation_yaw_.load());
     ImGui::Text("Roll: %f", orientation_roll_.load());
     ImGui::Text("Pitch: %f", orientation_pitch_.load());
-    ImGui::PlotLines(orientation_yaw)
+    ImGui::Text("sys calib: %u", sys_calib_.load());
+    ImGui::Text("gyr calib: %u", gyr_calib_.load());
+    ImGui::Text("acc calib: %u", acc_calib_.load());
+    ImGui::Text("mag calib: %u", mag_calib_.load());
+    for (int i = 0; i < 22; i++){
+        ImGui::Text("calib: %u, %u", i, actual_calib_data[i]);
+    }
+    // ImGui::PlotLines("orientation: ", orientation_yaw_graph_, 10000);
     ImGui::End();
 }
 
@@ -50,17 +57,26 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         pi_.ReadI2CBlockData(orientation_sensor_handle_, 0x1A, buff.data, 6);
 
         orientation_yaw_ = buff.yaw / 16.0;
-        orientation_roll_ = buff.roll / 16.0;
-        orientation_pitch_ = buff.pitch / 16.0;
+        orientation_roll_ = buff.pitch / 16.0; // fliped roll and pitch since bno is rotated
+        orientation_pitch_ = buff.roll / 16.0;
 
-        for (int i = 0; i < 9999; i++){
-            orientation_yaw_graph_[i] = orientation_yaw_graph_[i+1];
-            orientation_roll_graph_[i] = orientation_roll_graph_[i+1];
-            orientation_pitch_graph_[i] = orientation_pitch_graph_[i+1];
-        }
-        orientation_yaw_graph_[9999] = orientation_yaw_;
-        orientation_roll_graph_[9999] = orientation_roll_;
-        orientation_pitch_graph_[9999] = orientation_pitch_;
+        
+
+        calib_data_ = pi_.ReadI2CByteData(orientation_sensor_handle_, 0x35);
+        sys_calib_ = (calib_data_ && 0b11000000) >> 6;
+        gyr_calib_ = (calib_data_ && 0b00110000) >> 4;
+        acc_calib_ = (calib_data_ && 0b00001100) >> 2;
+        mag_calib_ = (calib_data_ && 0b00000011);
+
+        pi_.ReadI2CBlockData(orientation_sensor_handle_, 0x55, actual_calib_data, 22);
+        // for (int i = 0; i < 9999; i++){
+        //     orientation_yaw_graph_[i] = orientation_yaw_graph_[i+1];
+        //     orientation_roll_graph_[i] = orientation_roll_graph_[i+1];
+        //     orientation_pitch_graph_[i] = orientation_pitch_graph_[i+1];
+        // }
+        // orientation_yaw_graph_[9999] = orientation_yaw_;
+        // orientation_roll_graph_[9999] = orientation_roll_;
+        // orientation_pitch_graph_[9999] = orientation_pitch_;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }

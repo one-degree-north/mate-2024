@@ -79,14 +79,14 @@ void Controls::ShowControlsWindow() {
             Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
             Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
         } else {
-            if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 0.01);
-            if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 0.01);
+            if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
+            if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 5);
         }
 
         ImGui::Text("Movement Vector");
