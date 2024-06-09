@@ -2,7 +2,7 @@
 #include <thread>
 
 #include <imgui.h>
-
+#include <implot.h>
 #include "depth_sensor.h"
 #include "pigpio.h"
 
@@ -87,7 +87,10 @@ void DepthSensor::ShowDepthSensorWindow() {
     ImGui::Text("Pressure: %.2f mbar", this->pressure_.load());
     ImGui::Text("Depth: %.2f m", this->GetDepth());
     if (ImGui::Button("plot depth")) plot_depth=!plot_depth;
-    if (plot_depth)ImGui::PlotLines("depth: ", depth_graph, 10000);
+    if(ImPlot::BeginPlot("depth over time")){
+        ImPlot::PlotLine("depth: ", depth_graph, 1500);
+        ImPlot::EndPlot();
+    }
 
     ImGui::End();
 }
@@ -105,8 +108,8 @@ void DepthSensor::DepthSensorThreadLoop() {
     while (this->depth_sensor_thread_running_) {
         PollSensorData();
         if (plot_depth){
-            for (int i = 0; i < 9999; i++){
-                depth_graph[i+1] = depth_graph[i];
+            for (int i = 1499; i > 0; i--){
+                depth_graph[i] = depth_graph[i-1];
             }
             depth_graph[0] = GetDepth();
         }

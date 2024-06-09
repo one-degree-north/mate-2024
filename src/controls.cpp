@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include "implot.h"
 
 #include "controls.h"
 #include "depth_sensor.h"
@@ -162,10 +163,10 @@ void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const Orientatio
         front_right = (speed_ * (movement_vector_.forward - movement_vector_.side) - movement_vector_.yaw) / 30.0;
         back_left = -(speed_ * (movement_vector_.forward - movement_vector_.side) + movement_vector_.yaw) / 30.0;
         back_right = -(speed_ * (movement_vector_.forward + movement_vector_.side) - movement_vector_.yaw) / 30.0;
-        mid_front_left = -(speed_ * (movement_vector_.up) - movement_vector_.roll + movement_vector_.pitch) / 30.0;
-        mid_front_right = -(speed_ * (movement_vector_.up) + movement_vector_.roll + movement_vector_.pitch) / 30.0;
-        mid_back_left = -(speed_ * (movement_vector_.up) - movement_vector_.roll - movement_vector_.pitch) / 30.0;
-        mid_back_right = -(speed_ * (movement_vector_.up) + movement_vector_.roll - movement_vector_.pitch) / 30.0;
+        mid_front_left = -(movement_vector_.up - movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_front_right = -(movement_vector_.up + movement_vector_.roll + movement_vector_.pitch) / 30.0;
+        mid_back_left = -(movement_vector_.up - movement_vector_.roll - movement_vector_.pitch) / 30.0;
+        mid_back_right = -(movement_vector_.up + movement_vector_.roll - movement_vector_.pitch) / 30.0;
     }
     else{
         front_left = speed_ * (movement_vector_.forward + movement_vector_.side + movement_vector_.yaw) / 30.0;
