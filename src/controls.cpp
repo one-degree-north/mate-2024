@@ -92,6 +92,7 @@ void Controls::ShowControlsWindow() {
 
         ImGui::Text("Movement Vector");
         ImGui::Text("Forward: %f", movement_vector_.up);
+        ImGui::Text("yaw: %f", movement_vector_.yaw);
 
 
         ImGui::SliderFloat("Speed", reinterpret_cast<float *>(&this->speed_), 0.0, 30.0);

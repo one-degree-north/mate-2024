@@ -40,10 +40,10 @@ private:
 
     bool pid_enabled_ = false;
 
-    PID depth_pid_{0.0, 0.0, 0.0, -10.0, 10.0, false};
-    PID roll_pid_{0.0, 0.0, 0.0, -10.0, 10.0, true};
-    PID pitch_pid_{0.0, 0.0, 0.0, -10.0, 10.0, true};
-    PID yaw_pid_{0.0, 0.0, 0.0, -10.0, 10.0, true};
+    PID depth_pid_{30, 0.02, 0.0, -10.0, 10.0, false};
+    PID roll_pid_{0.48825, 0.023436, 0.0, -10.0, 10.0, true};
+    PID pitch_pid_{1.8, 0.0939130434783, 0.0, -10.0, 10.0, true};
+    PID yaw_pid_{0.45, 0.0142105263158, 0.0, -10.0, 10.0, true};
 
     std::atomic<float> claw_rotation_ = 0.0;
     std::atomic<float> claw_open_ = 0.0;
