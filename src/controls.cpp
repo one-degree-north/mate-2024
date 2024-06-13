@@ -83,12 +83,12 @@ void Controls::ShowControlsWindow() {
         } else {
             if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
             if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
-            if (ImGui::IsKeyPressed(ImGuiKey_I, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_K, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_I, false)) this->pitch_pid_.SetTarget(std::fmod(this->pitch_pid_.GetTarget() + 5, 360));
+            if (ImGui::IsKeyPressed(ImGuiKey_K, false)) this->pitch_pid_.SetTarget(std::fmod(this->pitch_pid_.GetTarget() - 5, 360));
+            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(std::fmod(this->roll_pid_.GetTarget() + 5, 360));
+            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(std::fmod(this->roll_pid_.GetTarget() - 5, 360));
+            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(std::fmod(this->yaw_pid_.GetTarget() + 5, 360));
+            if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(std::fmod(this->yaw_pid_.GetTarget() - 5, 360));
         }
 
         ImGui::Text("Movement Vector");
@@ -162,10 +162,10 @@ void Controls::ShowControlsWindow() {
             this->claw_rotation_ = std::clamp(this->claw_rotation_ + claw_control_speed_ * (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] - state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]), -1.0f, 1.0f);
 
             if (pid_enabled_) {
-                if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
-                if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
-                this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
-                this->yaw_pid_.SetTarget(this->roll_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]);
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->depth_pid_.SetTarget(std::fmod(this->depth_pid_.GetTarget() + 0.05, 360));
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->depth_pid_.SetTarget(std::fmod(this->depth_pid_.GetTarget() - 0.05, 360));
+                this->pitch_pid_.SetTarget(std::fmod(this->pitch_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y], 360));
+                this->yaw_pid_.SetTarget(std::fmod(this->roll_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], 360));
             } else {
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->movement_vector_.up += 1.0;
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->movement_vector_.up -= 1.0;
