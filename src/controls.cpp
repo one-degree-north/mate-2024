@@ -89,11 +89,6 @@ void Controls::ShowControlsWindow() {
             if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 5);
             if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 5);
             if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 5);
-
-            ImGui::Text("Depth Target: %f", this->depth_pid_.GetTarget());
-            ImGui::Text("Pitch Target: %f", this->pitch_pid_.GetTarget());
-            ImGui::Text("Roll Target: %f", this->roll_pid_.GetTarget());
-            ImGui::Text("Yaw Target: %f", this->yaw_pid_.GetTarget());
         }
 
         ImGui::Text("Movement Vector");
@@ -158,8 +153,6 @@ void Controls::ShowControlsWindow() {
 
             this->movement_vector_.forward = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
             this->movement_vector_.side = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
-            this->movement_vector_.pitch = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
-            this->movement_vector_.yaw = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
 
             ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
             ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -0.15,  0.45);
@@ -171,9 +164,13 @@ void Controls::ShowControlsWindow() {
             if (pid_enabled_) {
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
+                this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+                this->yaw_pid_.SetTarget(this->roll_pid_.GetTarget() + 5 * state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]);
             } else {
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->movement_vector_.up += 1.0;
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->movement_vector_.up -= 1.0;
+                this->movement_vector_.pitch = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+                this->movement_vector_.yaw = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
             }
 
             if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT]) pid_enabled_ = !pid_enabled_;
@@ -194,6 +191,13 @@ void Controls::ShowControlsWindow() {
         }
     }
 
+    ImGui::End();
+
+    ImGui::Begin("PID Targets");
+    ImGui::Text("Depth Target: %f", this->depth_pid_.GetTarget());
+    ImGui::Text("Pitch Target: %f", this->pitch_pid_.GetTarget());
+    ImGui::Text("Roll Target: %f", this->roll_pid_.GetTarget());
+    ImGui::Text("Yaw Target: %f", this->yaw_pid_.GetTarget());
     ImGui::End();
 }
 
