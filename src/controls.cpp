@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <GLFW/glfw3.h>
 #include "implot.h"
 
 #include "controls.h"
@@ -139,7 +140,43 @@ void Controls::ShowControlsWindow() {
 
 
     } else {
-        ImGui::Text("todo!");
+
+        GLFWgamepadstate state;
+        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+            ImGui::Text("Joystick Connected");
+
+            this->movement_vector_.forward = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+            this->movement_vector_.side = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+            this->movement_vector_.pitch = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+            this->movement_vector_.yaw = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+
+            this->claw_open_ = std::clamp(this->claw_open_ + 0.1 * (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] - state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]), -1.0, 1.0);
+            this->claw_rotation_ = std::clamp(this->claw_rotation_ + 0.1 * (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] - state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]), -1.0, 1.0);
+
+            if (pid_enabled_) {
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
+            } else {
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->movement_vector_.up += 1.0;
+                if (state.buttons[GLFW_GAMEPAD_BUTTON_B]) this->movement_vector_.up -= 1.0;
+            }
+
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT]) pid_enabled_ = !pid_enabled_;
+
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP]) this->speed_ = this->speed_ + 1.0;
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN]) this->speed_ = this->speed_ - 1.0;
+
+
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_X]) {
+                pid_enabled_ = false;
+                this->speed_ = 0;
+            }
+
+
+
+        } else {
+            ImGui::Text("Joystick Not Connected");
+        }
     }
 
     ImGui::End();
