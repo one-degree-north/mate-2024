@@ -21,7 +21,7 @@ private:
     int video_width_ = 0;
     int video_height_ = 0;
     int port_;
-    const char* window_id_;
+    std::string window_id_;
 
     void PollCameraStream();
 };

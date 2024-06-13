@@ -32,7 +32,7 @@ CameraStream::CameraStream(Pi &pi, int port) : pi_(pi), port_(port) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    window_id_ = ("Camera Stream##" + std::to_string(port_)).c_str();
+    window_id_ = "Camera Stream##" + std::to_string(port_);
 }
 
 CameraStream::~CameraStream() {
@@ -51,7 +51,7 @@ void CameraStream::ShowCameraStream() {
     this->PollCameraStream();
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin(window_id_);
+    ImGui::Begin(window_id_.c_str());
 
     ImVec2 windowSize = ImGui::GetWindowSize();
     windowSize.y -= ImGui::GetFrameHeight();
