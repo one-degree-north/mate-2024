@@ -113,7 +113,7 @@ void Controls::ShowControlsWindow() {
         }
 
         ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
-        ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -1.0, 1.0);
+        ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -0.15,  0.45);
         ImGui::SliderFloat("Claw Control Speed", reinterpret_cast<float *>(&this->claw_control_speed_), 0.0, 1.0);
 
         if (ImGui::IsKeyPressed(ImGuiKey_V)) claw_open_ = claw_open_ + claw_control_speed_;
@@ -162,10 +162,10 @@ void Controls::ShowControlsWindow() {
             this->movement_vector_.yaw = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
 
             ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
-            ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -1.0, 1.0);
+            ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -0.15,  0.45);
             ImGui::SliderFloat("Claw Control Speed", reinterpret_cast<float *>(&this->claw_control_speed_), 0.0, 1.0);
 
-            this->claw_open_ = std::clamp(this->claw_open_ + claw_control_speed_ * (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] - state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]), -1.0f, 1.0f);
+            this->claw_open_ = std::clamp(this->claw_open_ + claw_control_speed_ * (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] - state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]), -0.15f, 0.45f);
             this->claw_rotation_ = std::clamp(this->claw_rotation_ + claw_control_speed_ * (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] - state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]), -1.0f, 1.0f);
 
             if (pid_enabled_) {
