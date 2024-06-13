@@ -2,7 +2,7 @@
 #include <thread>
 
 #include <imgui.h>
-
+#include <implot.h>
 #include "depth_sensor.h"
 #include "pigpio.h"
 
@@ -80,18 +80,23 @@ void DepthSensor::PollSensorData() {
     this->pressure_ = (digital_pressure_value * (SENS - SENSi) / 2097152l - OFF + OFFi) / (8192l * 10.0);
 }
 
-void DepthSensor::ShowDepthSensorWindow() const {
+void DepthSensor::ShowDepthSensorWindow() {
     ImGui::Begin("Depth Sensor");
 
     ImGui::Text("Temperature: %.2f C", this->temperature_.load());
     ImGui::Text("Pressure: %.2f mbar", this->pressure_.load());
     ImGui::Text("Depth: %.2f m", this->GetDepth());
+    if (ImGui::Button("plot depth")) plot_depth=!plot_depth;
+    if(ImPlot::BeginPlot("depth over time")){
+        ImPlot::PlotLine("depth: ", depth_graph, 1500);
+        ImPlot::EndPlot();
+    }
 
     ImGui::End();
 }
 
 double DepthSensor::GetDepth() const {
-    return (this->pressure_.load() * 100.0 - 101300.0) / (1029 * 9.80665);
+    return -1*(this->pressure_.load() * 100.0 - 101300.0) / (1029 * 9.80665);
 }
 
 void DepthSensor::StartDepthSensorThread() {
@@ -102,7 +107,12 @@ void DepthSensor::StartDepthSensorThread() {
 void DepthSensor::DepthSensorThreadLoop() {
     while (this->depth_sensor_thread_running_) {
         PollSensorData();
-
+        if (plot_depth){
+            for (int i = 1499; i > 0; i--){
+                depth_graph[i] = depth_graph[i-1];
+            }
+            depth_graph[0] = GetDepth();
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }

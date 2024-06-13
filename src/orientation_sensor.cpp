@@ -1,5 +1,5 @@
 #include "imgui.h"
-
+#include "implot.h"
 #include "orientation_sensor.h"
 
 OrientationSensor::OrientationSensor(Pi &pi) : pi_(pi) {
@@ -16,6 +16,11 @@ OrientationSensor::OrientationSensor(Pi &pi) : pi_(pi) {
 
     pi.WriteI2CByteData(orientation_sensor_handle_, 0x3D, 0x0C); // Go to NDOF mode
     pi.WriteI2CByteData(orientation_sensor_handle_, 0x3B, 0); // Unit Selection
+    for (int i = 0; i < 10000; i++){
+        yaw_graph[i] = 0;
+        pitch_graph[i] = 0;
+        roll_graph[i] = 0;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(30));
 }
 
@@ -26,13 +31,29 @@ OrientationSensor::~OrientationSensor() {
     pi_.CloseI2C(orientation_sensor_handle_);
 }
 
-void OrientationSensor::ShowOrientationSensorWindow() const {
+void OrientationSensor::ShowOrientationSensorWindow() {
     ImGui::Begin("Orientation Sensor");
 
     ImGui::Text("Yaw: %f", orientation_yaw_.load());
     ImGui::Text("Roll: %f", orientation_roll_.load());
     ImGui::Text("Pitch: %f", orientation_pitch_.load());
-
+    ImGui::Text("sys calib: %u", sys_calib_.load());
+    ImGui::Text("gyr calib: %u", gyr_calib_.load());
+    ImGui::Text("acc calib: %u", acc_calib_.load());
+    ImGui::Text("mag calib: %u", mag_calib_.load());
+    // for (int i = 0; i < 22; i++){
+    //     ImGui::Text("calib: %u, %u", i, actual_calib_data[i]);
+    // }
+    if (ImGui::Button("plot yaw"))plot_yaw=!plot_yaw;
+    if (ImGui::Button("plot pitch"))plot_pitch=!plot_pitch;
+    if (ImGui::Button("plot roll"))plot_roll=!plot_roll;
+    if (ImPlot::BeginPlot("orientation over time")){
+        ImPlot::PlotLine("yaw: ", yaw_graph, 10000);
+        ImPlot::PlotLine("pitch: ", pitch_graph, 10000);
+        ImPlot::PlotLine("roll: ", roll_graph, 10000);
+        ImPlot::EndPlot();
+    }
+    // ImGui::PlotLines("orientation: ", orientation_yaw_graph_, 10000);
     ImGui::End();
 }
 
@@ -50,8 +71,45 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         pi_.ReadI2CBlockData(orientation_sensor_handle_, 0x1A, buff.data, 6);
 
         orientation_yaw_ = buff.yaw / 16.0;
-        orientation_roll_ = buff.roll / 16.0;
-        orientation_pitch_ = buff.pitch / 16.0;
+        orientation_roll_ = buff.pitch / 16.0; // fliped roll and pitch since bno is rotated
+        orientation_pitch_ = buff.roll / 16.0;
+
+        
+
+        calib_data_ = pi_.ReadI2CByteData(orientation_sensor_handle_, 0x35);
+        sys_calib_ = (calib_data_ && 0b11000000) >> 6;
+        gyr_calib_ = (calib_data_ && 0b00110000) >> 4;
+        acc_calib_ = (calib_data_ && 0b00001100) >> 2;
+        mag_calib_ = (calib_data_ && 0b00000011);
+
+        // pi_.ReadI2CBlockData(orientation_sensor_handle_, 0x55, actual_calib_data, 22);
+        
+        if (plot_yaw){
+            for (int i = 9999; i > 0; i--){
+                yaw_graph[i] = yaw_graph[i-1];
+            }
+            yaw_graph[0] = orientation_yaw_;
+        }
+        if (plot_roll){
+            for (int i = 9999; i > 0; i--){
+                roll_graph[i] = roll_graph[i-1];
+            }
+            roll_graph[0] = orientation_roll_;
+        }
+        if (plot_pitch){
+            for (int i = 9999; i > 0; i--){
+                pitch_graph[i] = pitch_graph[i-1];
+            }
+            pitch_graph[0] = orientation_pitch_;
+        }
+        // for (int i = 0; i < 9999; i++){
+        //     orientation_yaw_graph_[i] = orientation_yaw_graph_[i+1];
+        //     orientation_roll_graph_[i] = orientation_roll_graph_[i+1];
+        //     orientation_pitch_graph_[i] = orientation_pitch_graph_[i+1];
+        // }
+        // orientation_yaw_graph_[9999] = orientation_yaw_;
+        // orientation_roll_graph_[9999] = orientation_roll_;
+        // orientation_pitch_graph_[9999] = orientation_pitch_;
 
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));

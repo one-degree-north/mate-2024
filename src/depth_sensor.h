@@ -11,7 +11,7 @@ public:
     explicit DepthSensor(Pi &pi);
     ~DepthSensor();
 
-    void ShowDepthSensorWindow() const;
+    void ShowDepthSensorWindow();
     double GetDepth() const;
     void PollSensorData();
     void StartDepthSensorThread();
@@ -23,6 +23,8 @@ private:
 
     std::atomic_bool depth_sensor_thread_running_ = false;
     std::thread depth_sensor_thread_;
+    std::atomic_bool plot_depth=false;
+    float depth_graph[1500];
     void DepthSensorThreadLoop();
 };
 
