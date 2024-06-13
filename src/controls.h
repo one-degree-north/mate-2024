@@ -47,6 +47,7 @@ private:
 
     std::atomic<float> claw_rotation_ = 0.0;
     std::atomic<float> claw_open_ = 0.0;
+    float claw_control_speed_ = 0.1;
  
     const float pid_speed = 10.0;
 

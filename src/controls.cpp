@@ -78,17 +78,22 @@ void Controls::ShowControlsWindow() {
         if (!pid_enabled_) {
             Controls::BindThrusterKey(this->movement_vector_.up, ImGuiKey_Space, ImGuiKey_LeftShift);
             Controls::BindThrusterKey(this->movement_vector_.pitch, ImGuiKey_O, ImGuiKey_U);
-            Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_L, ImGuiKey_J);
+            Controls::BindThrusterKey(this->movement_vector_.roll, ImGuiKey_I, ImGuiKey_K);
             Controls::BindThrusterKey(this->movement_vector_.yaw, ImGuiKey_E, ImGuiKey_Q);
         } else {
             if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
             if (ImGui::IsKeyPressed(ImGuiKey_LeftShift, false)) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() - 0.05);
-            if (ImGui::IsKeyPressed(ImGuiKey_O, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_U, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 5);
-            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_I, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() + 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_K, false)) this->pitch_pid_.SetTarget(this->pitch_pid_.GetTarget() - 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_J, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() + 5);
+            if (ImGui::IsKeyPressed(ImGuiKey_L, false)) this->roll_pid_.SetTarget(this->roll_pid_.GetTarget() - 5);
             if (ImGui::IsKeyPressed(ImGuiKey_E, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() + 5);
             if (ImGui::IsKeyPressed(ImGuiKey_Q, false)) this->yaw_pid_.SetTarget(this->yaw_pid_.GetTarget() - 5);
+
+            ImGui::Text("Depth Target: %f", this->depth_pid_.GetTarget());
+            ImGui::Text("Pitch Target: %f", this->pitch_pid_.GetTarget());
+            ImGui::Text("Roll Target: %f", this->roll_pid_.GetTarget());
+            ImGui::Text("Yaw Target: %f", this->yaw_pid_.GetTarget());
         }
 
         ImGui::Text("Movement Vector");
@@ -109,6 +114,12 @@ void Controls::ShowControlsWindow() {
 
         ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
         ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -1.0, 1.0);
+        ImGui::SliderFloat("Claw Control Speed", reinterpret_cast<float *>(&this->claw_control_speed_), 0.0, 1.0);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_V)) claw_open_ = claw_open_ + claw_control_speed_;
+        if (ImGui::IsKeyPressed(ImGuiKey_C)) claw_open_ = claw_open_ - claw_control_speed_;
+        if (ImGui::IsKeyPressed(ImGuiKey_U)) claw_rotation_ = claw_rotation_ + claw_control_speed_;
+        if (ImGui::IsKeyPressed(ImGuiKey_O)) claw_rotation_ = claw_rotation_ - claw_control_speed_;
 
         const char* items[] = {"Depth", "Roll", "Pitch", "Yaw"};
         static int curr_item = 0;
@@ -150,8 +161,12 @@ void Controls::ShowControlsWindow() {
             this->movement_vector_.pitch = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
             this->movement_vector_.yaw = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
 
-            this->claw_open_ = std::clamp(this->claw_open_ + 0.1 * (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] - state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]), -1.0, 1.0);
-            this->claw_rotation_ = std::clamp(this->claw_rotation_ + 0.1 * (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] - state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]), -1.0, 1.0);
+            ImGui::SliderFloat("Claw Rotation", reinterpret_cast<float *>(&this->claw_rotation_), -1.0, 1.0);
+            ImGui::SliderFloat("Claw Open", reinterpret_cast<float *>(&this->claw_open_), -1.0, 1.0);
+            ImGui::SliderFloat("Claw Control Speed", reinterpret_cast<float *>(&this->claw_control_speed_), 0.0, 1.0);
+
+            this->claw_open_ = std::clamp(this->claw_open_ + claw_control_speed_ * (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] - state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]), -1.0f, 1.0f);
+            this->claw_rotation_ = std::clamp(this->claw_rotation_ + claw_control_speed_ * (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] - state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER]), -1.0f, 1.0f);
 
             if (pid_enabled_) {
                 if (state.buttons[GLFW_GAMEPAD_BUTTON_A]) this->depth_pid_.SetTarget(this->depth_pid_.GetTarget() + 0.05);
