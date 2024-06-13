@@ -5,7 +5,7 @@
 #include <iostream>
 #include "camera_stream.h"
 
-CameraStream::CameraStream(Pi &pi, int port) : pi_(pi) {
+CameraStream::CameraStream(Pi &pi, int port) : pi_(pi), port_(port) {
     gst_init(nullptr, nullptr);
 
 //    int exit_code = pi.Shell("run", "gst-launch-1.0 v4l2src device=/dev/video0 ! jpegenc ! rtpjpegpay ! udpsink host=192.168.1.1 port=6970 &> /dev/null &");
@@ -31,6 +31,8 @@ CameraStream::CameraStream(Pi &pi, int port) : pi_(pi) {
     glBindTexture(GL_TEXTURE_2D, this->video_texture_);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    window_id_ = ("Camera Stream##" + std::to_string(port_)).c_str();
 }
 
 CameraStream::~CameraStream() {
@@ -49,7 +51,7 @@ void CameraStream::ShowCameraStream() {
     this->PollCameraStream();
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Camera Stream");
+    ImGui::Begin(window_id_);
 
     ImVec2 windowSize = ImGui::GetWindowSize();
     windowSize.y -= ImGui::GetFrameHeight();
