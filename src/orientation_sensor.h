@@ -17,6 +17,11 @@ public:
     double GetOrientationYaw() const;
     double GetOrientationRoll() const;
     double GetOrientationPitch() const;
+
+    const uint8_t CALIB_ADDR = 0x35;
+    const uint8_t OFFSET_ADDR = 0x55;
+    int16_t offset_data[9] = {-157, -182, 93, -1, 1, 0, -29, -36, -34};
+
 private:
     Pi &pi_;
     int orientation_sensor_handle_;
@@ -27,6 +32,9 @@ private:
     std::atomic_bool orientation_sensor_thread_running_ = false;
     std::thread orientation_sensor_thread_;
     std::atomic_bool plot_yaw=false, plot_roll=false, plot_pitch=false;
+    float moving_avgs[3];
+    float max_error = 5;
+    uint16_t moving_avg_len = 10;
     void OrientationSensorThreadLoop();
 };
 

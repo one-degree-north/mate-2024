@@ -16,11 +16,18 @@ OrientationSensor::OrientationSensor(Pi &pi) : pi_(pi) {
 
     pi.WriteI2CByteData(orientation_sensor_handle_, 0x3D, 0x0C); // Go to NDOF mode
     pi.WriteI2CByteData(orientation_sensor_handle_, 0x3B, 0); // Unit Selection
+
+    //calibrate BNO
+    pi.WriteI2CByteData(orientation_sensor_handle_, 0x3D, 0x00); // config mode
+    pi.WriteI2CBlockData(orientation_sensor_handle_, 0x55, char*(offset_data), 18);
+    pi.WriteI2CByteData(orientation_sensor_handle_, 0x3D, 0x0C); // Go to NDOF mode
+
     for (int i = 0; i < 10000; i++){
         yaw_graph[i] = 0;
         pitch_graph[i] = 0;
         roll_graph[i] = 0;
     }
+    
     std::this_thread::sleep_for(std::chrono::milliseconds(30));
 }
 
@@ -74,7 +81,53 @@ void OrientationSensor::OrientationSensorThreadLoop() {
         orientation_roll_ = buff.pitch / 16.0; // fliped roll and pitch since bno is rotated
         orientation_pitch_ = buff.roll / 16.0;
 
-        
+        // funny noise filter
+        moving_avgs[0] = 0;
+        moving_avgs[1] = 0;
+        moving_avgs[2] = 0;
+        for (int i = 0; i < moving_avg_len; i++){
+            moving_avgs[0] += yaw_graph[i];
+            moving_avgs[1] += roll_graph[i];
+            moving_avgs[2] += pitch_graph[i];
+
+        }
+
+
+        float yaw_error = moving_avgs[0] - orientation_yaw_;
+        if (yaw_error > 180){
+            yaw_error = -1*(yaw_error-360);
+        }
+        if (yaw_error < -180){
+            yaw_error = (yaw_error+360);
+        }
+
+        if (yaw_error > max_error || yaw_error < max_error){
+            orientation_yaw_ = moving_avgs[0];
+        }
+
+        // float roll_error = moving_avgs[1] - orientation_roll_;
+        // if (roll_error > 180){
+        //     roll_error = -1*(roll_error-360);
+        // }
+        // if (roll_error < -180){
+        //     roll_error = (roll_error+360);
+        // }
+
+        // if (roll_error > max_error || roll_error < max_error){
+        //     orientation_yaw_ = moving_avgs[1];
+        // }
+
+        // float roll_error = moving_avgs[1] - orientation_roll_;
+        // if (roll_error > 180){
+        //     roll_error = -1*(roll_error-360);
+        // }
+        // if (roll_error < -180){
+        //     roll_error = (roll_error+360);
+        // }
+
+        // if (roll_error > max_error || roll_error < max_error){
+        //     orientation_yaw_ = moving_avgs[1];
+        // }
 
         calib_data_ = pi_.ReadI2CByteData(orientation_sensor_handle_, 0x35);
         sys_calib_ = (calib_data_ && 0b11000000) >> 6;

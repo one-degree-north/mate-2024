@@ -21,6 +21,7 @@ double PID::Update(double current_value) {
         if (error < -180){
             error = (error+360);
         }
+        // error = fmod(error, 360);
         // error *= -1;
         // error = fmod(error+180.0, 360.0)-180.0;
     }
