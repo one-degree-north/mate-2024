@@ -89,7 +89,6 @@ void OrientationSensor::OrientationSensorThreadLoop() {
             moving_avgs[0] += yaw_graph[i];
             moving_avgs[1] += roll_graph[i];
             moving_avgs[2] += pitch_graph[i];
-
         }
 
 
