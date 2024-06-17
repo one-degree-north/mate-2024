@@ -1,5 +1,7 @@
 from enum import Enum
 import time
+from adafruit_pca9685 import PCA9685
+import threading
 
 class PID():
     def __init__(self, k_const=0, i_const=0, d_const=0, eul=False):
@@ -69,8 +71,10 @@ class Controls():
     #     MID_BACK_RIGHT = 1,     // Reversed
     #     MID_BACK_LEFT = 5       // Reversed
     # };
+        self.pca = PCA9685(i2c_bus=board.I2C(),address=0x40, reference_clock_speed=25800000)
+        self.pca.frequency=50
         self.thrusters = Enum("t_pin", ["REAR_RIGHT", "MID_BACK_RIGHT", "REAR_LEFT", "FRONT_RIGHT", "FRONT_LEFT", "MID_BACK_LEFT", "MID_FRONT_LEFT", "MID_FRONT_RIGHT"])
-        self.thrust_values = {"front_left": 0, "front_right": 0, "back_left": 0, "back_right": 0, "mid_front_left":0, "mid_front_right":0, "mid_back_left":0, "mi_back_right":0}
+        self.thrust_values = [0,0,0,0,0,0,0,0]
         self.speed = 0
         self.movements = {"front": 0, "side": 0, "up":0, "yaw":0, "roll":0, "pitch":0}
         self.pid_enabled = False
@@ -79,6 +83,23 @@ class Controls():
         self.roll_pid = PID()
         self.pitch_pid = PID()
         self.sensors = sensors
+        self.loop_lock = threading.Lock()
+        self.delay = 0.01     # in seconds
+
+    def thrust_to_clock(self, t):
+        c = int(0xFFFF * (0.025 * t + 0.075))
+        if c > int(float(0xFFFF) * (0.125)):
+            c = int(float(0xFFFF) * (0.125))
+        if c < int(float(0xFFFF) * (0.025)):
+            c = int(float(0xFFFF) * (0.025))
+        return c
+
+    def update_loop(self):
+        while True:
+            self.loop_lock.acquire()
+            self.update_thrusters()
+            self.loop_lock.release()
+            time.sleep(self.delay)
 
     def update_thrusters(self):
         if (self.pid_enabled):
@@ -87,98 +108,45 @@ class Controls():
             self.movements.roll = self.roll_pid.update(self.sensors.data["roll"])
             self.movements.pitch = self.pitch_pid.update(self.sensors.data["pitch"])
 
-            self.thrust_values["front_left"] = (self.speed * (self.movements.forward + self.movements.side) + self.movements.yaw) / 30.0;
-            self.thrust_values["front_right"] = (self.speed * (self.movements.forward - self.movements.side) - self.movements.yaw) / 30.0;
-            self.thrust_values["back_left"] = -(self.speed * (self.movements.forward - self.movements.side) + self.movements.yaw) / 30.0;
-            self.thrust_values["back_right"] = -(self.speed * (self.movements.forward + self.movements.side) - self.movements.yaw) / 30.0;
-            self.thrust_values["mid_front_left"] = -(self.movements.up - self.movements.roll + self.movements.pitch) / 30.0;
-            self.thrust_values["mid_front_right"] = -(self.movements.up + self.movements.roll + self.movements.pitch) / 30.0;
-            self.thrust_values["mid_back_left"] = -(self.movements.up - self.movements.roll - self.movements.pitch) / 30.0;
-            self.thrust_values["mid_back_right"] = -(self.movements.up + self.movements.roll - self.movements.pitch) / 30.0;
+            self.thrust_values[self.thrusters.FRONT_LEFT.value] = (self.speed * (self.movements.forward + self.movements.side) + self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = (self.speed * (self.movements.forward - self.movements.side) - self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.REAR_LEFT.value] = -(self.speed * (self.movements.forward - self.movements.side) + self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -(self.speed * (self.movements.forward + self.movements.side) - self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -(self.movements.up - self.movements.roll + self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -(self.movements.up + self.movements.roll + self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -(self.movements.up - self.movements.roll - self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -(self.movements.up + self.movements.roll - self.movements.pitch) / 30.0
 
         else:
-            self.thrust_values["front_left"] = self.speed * (self.movements.forward + self.movements.side + self.movements.yaw) / 30.0;
-            self.thrust_values["front_right"] = self.speed * (self.movements.forward - self.movements.side - self.movements.yaw) / 30.0;
-            self.thrust_values["back_left"] = -self.speed * (self.movements.forward - self.movements.side + self.movements.yaw) / 30.0;
-            self.thrust_values["back_right"] = -self.speed * (self.movements.forward + self.movements.side - self.movements.yaw) / 30.0;
-            self.thrust_values["mid_front_left"] = -self.speed * (self.movements.up - self.movements.roll + self.movements.pitch) / 30.0;
-            self.thrust_values["mid_front_right"] = -self.speed * (self.movements.up + self.movements.roll + self.movements.pitch) / 30.0;
-            self.thrust_values["mid_back_left"] = -self.speed * (self.movements.up - self.movements.roll - self.movements.pitch) / 30.0;
-            self.thrust_values["mid_back_right"] = -self.speed * (self.movements.up + self.movements.roll - self.movements.pitch) / 30.0;
+            self.thrust_values[self.thrusters.FRONT_LEFT.value] = self.speed * (self.movements.forward + self.movements.side + self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = self.speed * (self.movements.forward - self.movements.side - self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.REAR_LEFT.value] = -self.speed * (self.movements.forward - self.movements.side + self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -self.speed * (self.movements.forward + self.movements.side - self.movements.yaw) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -self.speed * (self.movements.up - self.movements.roll + self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -self.speed * (self.movements.up + self.movements.roll + self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -self.speed * (self.movements.up - self.movements.roll - self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -self.speed * (self.movements.up + self.movements.roll - self.movements.pitch) / 30.0
+        for i in range(8):
+            self.pca.channels[self.thrusters[i]].duty_cycle = self.thrust_to_clock(self.thrust_values.items[i]/30)
 
+    def set_manual_thrust(self, front, side, up, yaw, pitch, roll):
+        self.loop_lock.acquire()
+        self.movements["front"] = front
+        self.movements["side"] = side
+        self.movements["up"] = up
+        self.movements["yaw"] = yaw
+        self.movements["pitch"] = pitch
+        self.movements["roll"] = roll
+        self.loop_lock.release()
+    def set_pid_thrust(self, front, side, up, yaw, pitch, roll):
+        self.loop_lock.acquire()
+        self.movements["front"] = front
+        self.movements["side"] = side
+        self.depth_pid.set_target(up)
+        self.yaw_pid.set_target(yaw)
+        self.pitch_pid.set_target(pitch)
+        self.roll_pid.set_target(roll)
+        self.loop_lock.release()
 
-void Controls::UpdateThrusters(const DepthSensor &depth_sensor, const OrientationSensor &orientation_sensor) {
-    double front_left;
-    double front_right;
-    double back_left;
-    double back_right;
-    double mid_front_left;
-    double mid_front_right;
-    double mid_back_left;
-    double mid_back_right;
-    if (pid_enabled_) {
-        self.movements.up = depth_pid_.Update(depth_sensor.GetDepth());
-        self.movements.yaw = yaw_pid_.Update(orientation_sensor.GetOrientationYaw());
-        self.movements.roll = roll_pid_.Update(orientation_sensor.GetOrientationRoll());
-        self.movements.pitch = pitch_pid_.Update(orientation_sensor.GetOrientationPitch());
-
-        front_left = (speed_ * (self.movements.forward + self.movements.side) + self.movements.yaw) / 30.0;
-        front_right = (speed_ * (self.movements.forward - self.movements.side) - self.movements.yaw) / 30.0;
-        back_left = -(speed_ * (self.movements.forward - self.movements.side) + self.movements.yaw) / 30.0;
-        back_right = -(speed_ * (self.movements.forward + self.movements.side) - self.movements.yaw) / 30.0;
-        mid_front_left = -(self.movements.up - self.movements.roll + self.movements.pitch) / 30.0;
-        mid_front_right = -(self.movements.up + self.movements.roll + self.movements.pitch) / 30.0;
-        mid_back_left = -(self.movements.up - self.movements.roll - self.movements.pitch) / 30.0;
-        mid_back_right = -(self.movements.up + self.movements.roll - self.movements.pitch) / 30.0;
-    }
-    else{
-        front_left = speed_ * (self.movements.forward + self.movements.side + self.movements.yaw) / 30.0;
-        front_right = speed_ * (self.movements.forward - self.movements.side - self.movements.yaw) / 30.0;
-        back_left = -speed_ * (self.movements.forward - self.movements.side + self.movements.yaw) / 30.0;
-        back_right = -speed_ * (self.movements.forward + self.movements.side - self.movements.yaw) / 30.0;
-        mid_front_left = -speed_ * (self.movements.up - self.movements.roll + self.movements.pitch) / 30.0;
-        mid_front_right = -speed_ * (self.movements.up + self.movements.roll + self.movements.pitch) / 30.0;
-        mid_back_left = -speed_ * (self.movements.up - self.movements.roll - self.movements.pitch) / 30.0;
-        mid_back_right = -speed_ * (self.movements.up + self.movements.roll - self.movements.pitch) / 30.0;
-    }
-    union {
-        uint32_t thrusts[8];
-        char feather_wing_register_data[32];
-    } data {};
-
-
-    data.thrusts[Thruster::FRONT_LEFT] = Controls::DoubleToFeatherWingOnTime(front_left);
-    data.thrusts[Thruster::FRONT_RIGHT] = Controls::DoubleToFeatherWingOnTime(front_right);
-    data.thrusts[Thruster::REAR_LEFT] = Controls::DoubleToFeatherWingOnTime(back_left);
-    data.thrusts[Thruster::REAR_RIGHT] = Controls::DoubleToFeatherWingOnTime(back_right);
-    data.thrusts[Thruster::MID_FRONT_LEFT] = Controls::DoubleToFeatherWingOnTime(mid_front_left);
-    data.thrusts[Thruster::MID_FRONT_RIGHT] = Controls::DoubleToFeatherWingOnTime(mid_front_right);
-    data.thrusts[Thruster::MID_BACK_LEFT] = Controls::DoubleToFeatherWingOnTime(mid_back_left);
-    data.thrusts[Thruster::MID_BACK_RIGHT] = Controls::DoubleToFeatherWingOnTime(mid_back_right);
-
-    for (uint32_t &thrust : data.thrusts)
-        thrust <<= 16;
-
-
-//    int res = pi_.WriteI2CBlockData(feather_wing_handle_, 0x06, data.feather_wing_data, 32);
-//    Pi::I2CZipCommand cmd;
-    for (int i = 0; i < 32; i++)
-//        cmd.WriteByte(0x06 + i, data.feather_wing_register_data[i]);
-//
-//    int a = cmd.Send(pi_, feather_wing_handle_);
-//    if (a != 0) std::cout << a << std::endl;
-
-        pi_.WriteI2CByteData(feather_wing_handle_, 0x06 + i, data.feather_wing_register_data[i]);
-
-    pi_.SetServoPulseWidth(12, std::clamp((int) ((claw_rotation_ + 1) * 1000 + 500),  500, 2500));
-    pi_.SetServoPulseWidth(13, std::clamp((int) ((claw_open_ + 1) * 1000 + 500),  500, 2500));
-
-//    pi_.SetServoPulseWidth(Thruster::MID_FRONT_LEFT, Controls::DoubleToPulseWidth(mid_front_left));
-//    pi_.SetServoPulseWidth(Thruster::MID_FRONT_RIGHT, Controls::DoubleToPulseWidth(mid_front_right));
-//    pi_.SetServoPulseWidth(Thruster::MID_BACK_LEFT, Controls::DoubleToPulseWidth(mid_back_left));
-//    pi_.SetServoPulseWidth(Thruster::MID_BACK_RIGHT, Controls::DoubleToPulseWidth(mid_back_right));
-//    pi_.SetServoPulseWidth(Thruster::FRONT_LEFT, Controls::DoubleToPulseWidth(front_left));
-//    pi_.SetServoPulseWidth(Thruster::FRONT_RIGHT, Controls::DoubleToPulseWidth(front_right));
-//    pi_.SetServoPulseWidth(Thruster::REAR_LEFT, Controls::DoubleToPulseWidth(back_left));
-//    pi_.SetServoPulseWidth(Thruster::REAR_RIGHT, Controls::DoubleToPulseWidth(back_right));
-}
+if __name__ == "__main__":
+    pass

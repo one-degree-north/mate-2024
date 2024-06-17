@@ -70,12 +70,12 @@ class Server:
             if len(data) == 25:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
-                self.thruster_control.set_thrust(trans=trans, rot=rot, pid=False)
+                self.thruster_control.set_manual_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2])
         elif cmd == 0x21:   # set pid thrust
             if len(data) == 25:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
-                self.thruster_control.set_thrust(trans=trans, rot=rot, pid=True)
+                self.thruster_control.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2])
         elif cmd == 0x22:   # set manual pos
             pass
         elif cmd == 0x30:   # close claw
@@ -83,23 +83,6 @@ class Server:
         elif cmd == 0x31:   # open claw
             self.interface.move_claw(True)
             
-    
-    #data is little endian
-    def send_data(self, data):
-        self.out_queue.put(data)
-    
-    def send_confirmation(self):
-        self.out_queue.put(struct.pack("!c", bytes([0x00])))
-
-    def send_thruster_positions(self):
-        pass
-
-    def send_servo_positions(self):
-        pass
-
-    def send_flashlight(self):
-        pass
-
     def send_sens_data(self, param, values):
         self.out_queue.put(struct.pack("!" + "c"*(3+len(values)), 0x33, param, len(values), *values))
 

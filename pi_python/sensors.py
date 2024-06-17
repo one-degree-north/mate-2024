@@ -2,6 +2,7 @@ from adafruit_extended_bus import ExtendedI2C as I2C
 from Adafruit_BNO055 import BNO055
 import ms5837
 import tsys01
+import time
 
 class Sensors():
     def __init__(self):
@@ -35,3 +36,10 @@ class Sensors():
         self.data["sys_calib"], self.data["gyro_calib"], self.data["accel_calib"], self.data["mag_calib"] = self.bno.calibration_status
         self.temp_sensor.read()
         self.data["temp"] = self.temp_sensor.read()
+
+if __name__ == "__main__":
+    sensor = Sensors()
+    while True:
+        time.sleep(0.01)
+        sensor.read_sensors()
+        print(sensor.data)
