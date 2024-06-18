@@ -7,6 +7,7 @@ if __name__ == "__main__":
     controls = Controls(sensors=sensors)
     server = Server(("192.168.2.2", 7774))
     server.set_interface(controls)
+    controls.server = server
     controls.start_loop()
     server_loop = server.start_server()
     server_loop.join()

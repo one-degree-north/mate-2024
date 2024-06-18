@@ -62,7 +62,7 @@ class PID():
         return final_val
 
 class Controls():
-    def __init__(self, sensors=None, debug=False, server=None):
+    def __init__(self, sensors=None, debug=False, server=None, send_data=True):
         #     enum Thruster {
     #     FRONT_RIGHT = 3,
     #     FRONT_LEFT = 4,
@@ -92,6 +92,7 @@ class Controls():
         self.claw_grip_pin = 13
         self.debug = debug
         self.server = server
+        self.send_data = send_data
 
     def thrust_to_clock(self, t):
         c = int(0xFFFF * (0.025 * t + 0.075))
@@ -114,7 +115,7 @@ class Controls():
 
     def update_thrusters(self):
         self.sensors.read_sensors()
-        
+
         if (self.pid_enabled):
             self.movements["up"] = self.depth_pid.update(self.sensors.data["depth"])
             self.movements["yaw"] = self.yaw_pid.update(self.sensors.data["yaw"])
@@ -144,6 +145,8 @@ class Controls():
         for i in range(8):
             #print(self.thrust_values[i]/30 * 2000)
             self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i])
+        if self.send_data:
+            self.server.send_sens_data(self.sensors.data)
 
     def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
