@@ -70,10 +70,10 @@ if __name__ == "__main__":
         pid_enabled= app_data
 
     def set_rot(sender, app_data):
-        client.set_rot(app_data)
+        client.set_rot(int(app_data))
     
     def set_grip(sender, app_data):
-        client.set_grip(app_data)
+        client.set_grip(int(app_data))
 
     def set_speed(sender, app_data):
         global changed
@@ -148,12 +148,12 @@ if __name__ == "__main__":
         dpg.add_drag_float(label="Grip", min_value=1000, max_value=1500, callback=set_grip)
         dpg.add_drag_float(label="Rotation", min_value=1000, max_value=1500, callback=set_rot)
 
-    if (changed):
-        if (pid_enabled):
-            client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_depth, target_roll, speed)
-        else:
-            client.set_manual_thrust(movement_vector, speed)
-    changed = False
+        if (changed):
+            if (pid_enabled):
+                client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_depth, target_roll, speed)
+            else:
+                client.set_manual_thrust(movement_vector, speed)
+        changed = False
 
 
     dpg.show_viewport()
