@@ -62,7 +62,7 @@ class PID():
         return final_val
 
 class Controls():
-    def __init__(self, sensors=None, debug=False, server=None, send_data=True):
+    def __init__(self, sensors=None, debug=True, server=None, send_data=True):
         #     enum Thruster {
     #     FRONT_RIGHT = 3,
     #     FRONT_LEFT = 4,
@@ -146,7 +146,11 @@ class Controls():
             #print(self.thrust_values[i]/30 * 2000)
             self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i])
         if self.send_data:
+            if self.debug:
+                print(f"trying to send sens")
             self.server.send_sens_data(self.sensors.data)
+            if self.debug:
+                print(f"funny send sens")
 
     def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()

@@ -8,6 +8,8 @@ if __name__ == "__main__":
     server = Server(("192.168.2.2", 7774))
     server.set_interface(controls)
     controls.server = server
+    print("starting controls")
     controls.start_loop()
+    print("starting server")
     server_loop = server.start_server()
     server_loop.join()
