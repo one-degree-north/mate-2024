@@ -5,7 +5,7 @@ from controls import Controls
 if __name__ == "__main__":
     sensors = Sensors()
     controls = Controls(sensors=sensors)
-    server = Server()
+    server = Server(("192.168.2.2", 7774))
     server.set_interface(controls)
     controls.start_loop()
     server._server_loop()
