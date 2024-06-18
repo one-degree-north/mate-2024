@@ -7,3 +7,5 @@ if __name__ == "__main__":
     controls = Controls(sensors=sensors)
     server = Server()
     server.set_interface(controls)
+    controls.start_loop()
+    server._server_loop()

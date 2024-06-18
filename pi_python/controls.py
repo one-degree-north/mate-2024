@@ -2,6 +2,7 @@ from enum import Enum
 import time
 from adafruit_pca9685 import PCA9685
 import threading
+import board
 
 class PID():
     def __init__(self, k_const=0, i_const=0, d_const=0, eul=False):
@@ -94,6 +95,10 @@ class Controls():
             c = int(float(0xFFFF) * (0.025))
         return c
 
+    def start_loop(self):
+        thread = threading.Thread(target=self.update_loop)
+        thread.run()
+
     def update_loop(self):
         while True:
             self.loop_lock.acquire()
@@ -129,7 +134,7 @@ class Controls():
         for i in range(8):
             self.pca.channels[self.thrusters[i]].duty_cycle = self.thrust_to_clock(self.thrust_values.items[i]/30)
 
-    def set_manual_thrust(self, front, side, up, yaw, pitch, roll):
+    def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
         self.movements["front"] = front
         self.movements["side"] = side
@@ -137,8 +142,9 @@ class Controls():
         self.movements["yaw"] = yaw
         self.movements["pitch"] = pitch
         self.movements["roll"] = roll
+        self.speed = speed
         self.loop_lock.release()
-    def set_pid_thrust(self, front, side, up, yaw, pitch, roll):
+    def set_pid_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
         self.movements["front"] = front
         self.movements["side"] = side
@@ -146,6 +152,7 @@ class Controls():
         self.yaw_pid.set_target(yaw)
         self.pitch_pid.set_target(pitch)
         self.roll_pid.set_target(roll)
+        self.speed = speed
         self.loop_lock.release()
 
 if __name__ == "__main__":

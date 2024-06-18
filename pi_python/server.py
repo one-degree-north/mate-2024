@@ -70,12 +70,14 @@ class Server:
             if len(data) == 25:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
-                self.thruster_control.set_manual_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2])
+                speed = struct.unpack("!f", data[25:29])
+                self.thruster_control.set_manual_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed)
         elif cmd == 0x21:   # set pid thrust
             if len(data) == 25:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
-                self.thruster_control.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2])
+                speed = struct.unpack("!f", data[25:29])
+                self.thruster_control.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed)
         elif cmd == 0x22:   # set manual pos
             pass
         elif cmd == 0x30:   # close claw
