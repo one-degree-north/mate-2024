@@ -100,7 +100,7 @@ class Server:
                 self.interface.set_rot(micro)
             
     def send_sens_data(self, data):
-        self.out_queue.put(struct.pack("!cBBBBfffff"), bytes([0x10]), *(data.values()))
+        self.out_queue.put(struct.pack("!cBBBBfffff", bytes([0x10]), *(data.values())))
 
 if __name__ == "__main__":
     pass
