@@ -78,7 +78,7 @@ class Controls():
         self.thrusters = Enum("t_pin", ["REAR_RIGHT", "MID_BACK_RIGHT", "REAR_LEFT", "FRONT_RIGHT", "FRONT_LEFT", "MID_BACK_LEFT", "MID_FRONT_LEFT", "MID_FRONT_RIGHT"])
         self.thrust_values = [0,0,0,0,0,0,0,0]
         self.speed = 0
-        self.movements = {"front": 0, "side": 0, "up":0, "yaw":0, "roll":0, "pitch":0}
+        self.movements = {"forward": 0, "side": 0, "up":0, "yaw":0, "roll":0, "pitch":0}
         self.pid_enabled = False
         self.depth_pid = PID()
         self.yaw_pid = PID()
@@ -112,29 +112,29 @@ class Controls():
 
     def update_thrusters(self):
         if (self.pid_enabled):
-            self.movements.up = self.depth_pid.update(self.sensors.data["depth"])
-            self.movements.yaw = self.yaw_pid.update(self.sensors.data["yaw"])
-            self.movements.roll = self.roll_pid.update(self.sensors.data["roll"])
-            self.movements.pitch = self.pitch_pid.update(self.sensors.data["pitch"])
+            self.movements["up"] = self.depth_pid.update(self.sensors.data["depth"])
+            self.movements["yaw"] = self.yaw_pid.update(self.sensors.data["yaw"])
+            self.movements["roll"] = self.roll_pid.update(self.sensors.data["roll"])
+            self.movements["pitch"] = self.pitch_pid.update(self.sensors.data["pitch"])
 
-            self.thrust_values[self.thrusters.FRONT_LEFT.value] = (self.speed * (self.movements.forward + self.movements.side) + self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = (self.speed * (self.movements.forward - self.movements.side) - self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.REAR_LEFT.value] = -(self.speed * (self.movements.forward - self.movements.side) + self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -(self.speed * (self.movements.forward + self.movements.side) - self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -(self.movements.up - self.movements.roll + self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -(self.movements.up + self.movements.roll + self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -(self.movements.up - self.movements.roll - self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -(self.movements.up + self.movements.roll - self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.FRONT_LEFT.value] = (self.speed * (self.movements["forward"] + self.movements["side"]) + self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = (self.speed * (self.movements["forward"] - self.movements["side"]) - self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.REAR_LEFT.value] = -(self.speed * (self.movements["forward"] - self.movements["side"]) + self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -(self.speed * (self.movements["forward"] + self.movements["side"]) - self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -(self.movements["up"] - self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -(self.movements["up"] + self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -(self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -(self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
 
         else:
-            self.thrust_values[self.thrusters.FRONT_LEFT.value] = self.speed * (self.movements.forward + self.movements.side + self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = self.speed * (self.movements.forward - self.movements.side - self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.REAR_LEFT.value] = -self.speed * (self.movements.forward - self.movements.side + self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -self.speed * (self.movements.forward + self.movements.side - self.movements.yaw) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -self.speed * (self.movements.up - self.movements.roll + self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -self.speed * (self.movements.up + self.movements.roll + self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -self.speed * (self.movements.up - self.movements.roll - self.movements.pitch) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -self.speed * (self.movements.up + self.movements.roll - self.movements.pitch) / 30.0
+            self.thrust_values[self.thrusters.FRONT_LEFT.value] = self.speed * (self.movements["forward"] + self.movements["side"] + self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.FRONT_RIGHT.value] = self.speed * (self.movements["forward"] - self.movements["side"] - self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.REAR_LEFT.value] = -self.speed * (self.movements["forward"] - self.movements["side"] + self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.REAR_RIGHT.value] = -self.speed * (self.movements["forward"] + self.movements["side"] - self.movements["yaw"]) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value] = -self.speed * (self.movements["up"] - self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value] = -self.speed * (self.movements["up"] + self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_LEFT.value] = -self.speed * (self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value] = -self.speed * (self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
         for i in range(8):
             self.pca.channels[self.thrusters[i]].duty_cycle = self.thrust_to_clock(self.thrust_values.items[i]/30)
 
