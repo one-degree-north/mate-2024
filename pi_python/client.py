@@ -37,6 +37,12 @@ class PIClient:
     def move_servo(self, pulse1, pulse2):
         self.out_queue.put(struct.pack("!cHH", bytes([0x20]), int(pulse1//2), int(pulse2//2)))
 
+    def set_grip(self, micro):
+        self.out_queue.put(struct.pack("!cI", bytes([0x30]), micro))
+
+    def set_rot(self, micro):
+        self.out_queue.put(struct.pack("!cI", bytes([0x31]), micro))
+
     def set_manual_thrust(self, moves, speed):
         self.out_queue.put(struct.pack("!cfffffff", bytes([0x20]), *(moves[0:6]), speed))
 
@@ -60,23 +66,15 @@ if __name__ == "__main__":
 
     # open new window context
     imgui.begin("python :3", True)
-
-
-
-    # close current window context
-    imgui.end()
-
-    # pass all drawing comands to the rendering pipeline
-    # and close frame context
-    imgui.render()
-    imgui.end_frame()
-
+    
     movement_vector = [0, 0, 0, 0, 0, 0]
     target_yaw = 0
     target_roll = 0
     target_depth = 0
     target_pitch = 0
     speed = 0
+    claw_rot = 1500
+    claw_grip = 1500
     imgui.core.is_key_pressed
     if (imgui.is_key_pressed(imgui.KEY_W)):
         movement_vector[0] = 1
@@ -136,6 +134,12 @@ if __name__ == "__main__":
             changed=True
     _, pid_enabled = imgui.checkbox("pid", pid_enabled)
     changed_s, speed = imgui.drag_float("speed", min_value=0, max_value=30, value=speed)
+    changed_r, claw_rot = imgui.drag_float("speed", min_value=1000, max_value=1500, value=claw_rot)
+    changed_g, claw_grip = imgui.drag_float("speed", min_value=1000, max_value=1500, value=claw_grip)
+    if (changed_r):
+        client.set_rot(int(claw_rot))
+    if (changed_g):
+        client.set_grip(int(claw_grip))
     if (changed_s):
         changed = True
     if (changed):
@@ -144,3 +148,12 @@ if __name__ == "__main__":
         else:
             client.set_manual_thrust(movement_vector, speed)
     changed = False
+
+
+    # close current window context
+    imgui.end()
+
+    # pass all drawing comands to the rendering pipeline
+    # and close frame context
+    imgui.render()
+    imgui.end_frame()

@@ -3,6 +3,7 @@ import time
 from adafruit_pca9685 import PCA9685
 import threading
 import board
+import pigpio
 
 class PID():
     def __init__(self, k_const=0, i_const=0, d_const=0, eul=False):
@@ -86,6 +87,9 @@ class Controls():
         self.sensors = sensors
         self.loop_lock = threading.Lock()
         self.delay = 0.01     # in seconds
+        self.pig = pigpio.pi()
+        self.claw_rot_pin = 12
+        self.claw_grip_pin = 13
 
     def thrust_to_clock(self, t):
         c = int(0xFFFF * (0.025 * t + 0.075))
@@ -154,6 +158,12 @@ class Controls():
         self.roll_pid.set_target(roll)
         self.speed = speed
         self.loop_lock.release()
+
+    def set_grip(self, micro):
+        self.pig.set_servo_pulsewidth(self.claw_grip_pin, micro)
+
+    def set_rot(self, micro):
+        self.pig.set_servo_pulsewidth(self.claw_rot_pin, micro)
 
 if __name__ == "__main__":
     pass

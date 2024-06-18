@@ -80,10 +80,14 @@ class Server:
                 self.thruster_control.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed)
         elif cmd == 0x22:   # set manual pos
             pass
-        elif cmd == 0x30:   # close claw
-            self.interface.move_claw(False)
-        elif cmd == 0x31:   # open claw
-            self.interface.move_claw(True)
+        elif cmd == 0x30:   # claw grip
+            if len(data) == 4:
+                micro = struct.unpack("!I", data[1:5])
+                self.interface.set_grip(micro)
+        elif cmd == 0x31:   # claw rot
+            if len(data) == 4:
+                micro = struct.unpack("!I", data[1:5])
+                self.interface.set_rot(micro)
             
     def send_sens_data(self, param, values):
         self.out_queue.put(struct.pack("!" + "c"*(3+len(values)), 0x33, param, len(values), *values))
