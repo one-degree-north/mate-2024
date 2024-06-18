@@ -277,8 +277,8 @@ if __name__ == "__main__":
         dpg.add_drag_float(label="d const", callback=set_pid_constant, user_data="pitch_d")
         with dpg.plot(label="pitch over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
-            dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y_axis")
-            dpg.add_hline_series(client.past_data_pitch, parent="y_axis")
+            dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y1_axis")
+            dpg.add_hline_series(client.past_data_pitch, parent="y1_axis")
     
     with dpg.window(label="roll pid"):
         dpg.add_text("roll PID")
@@ -287,8 +287,8 @@ if __name__ == "__main__":
         dpg.add_drag_float(label="d const", callback=set_pid_constant, user_data="roll_d")
         with dpg.plot(label="roll over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
-            dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y_axis")
-            dpg.add_hline_series(client.past_data_roll, parent="y_axis")
+            dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y2_axis")
+            dpg.add_hline_series(client.past_data_roll, parent="y2_axis")
     
     with dpg.window(label="depth pid"):
         dpg.add_text("depth PID")
@@ -297,8 +297,8 @@ if __name__ == "__main__":
         dpg.add_drag_float(label="d const", callback=set_pid_constant, user_data="depth_d")
         with dpg.plot(label="depth over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
-            dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y_axis")
-            dpg.add_hline_series(client.past_data_depth, parent="y_axis")
+            dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y3_axis")
+            dpg.add_hline_series(client.past_data_depth, parent="y3_axis")
 
     dpg.show_viewport()
     dpg.start_dearpygui()

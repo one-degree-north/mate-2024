@@ -44,8 +44,9 @@ class Server:
                 if self.debug:
                     print("attempting to read network data")
                 data, address = sock.recvfrom(2048)
-                if address != self.client_addr: #client switched address (something wrong happened)
+                if address != self.client_add or not self.connected: #client switched address (something wrong happened)
                     self.client_addr = address
+                    self.connected = True
                 self._parse_data(data)
             
             for sock in w:  #ready to write!
