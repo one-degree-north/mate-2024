@@ -23,6 +23,10 @@ class PID():
     def set_target(self, target):
         self.target = target
     
+    def reset(self):
+        self.prev_time = time.process_time_ns()
+        self.integral = 0
+
     def update(self, current_value):
         error = 0
         if (self.eul):

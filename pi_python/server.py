@@ -98,6 +98,44 @@ class Server:
                 if self.debug:
                     print(f"setting rot: {micro}")
                 self.interface.set_rot(micro)
+        elif cmd == 0x40:   # pid change constant
+            data_target = struct.unpack("!c", data[1:2]) #0: depth, 1: yaw, 2: pitch, 3: roll
+            data_type = struct.unpack("!c", data[2:3])
+            value = struct.unpack("!f", data[3:7])
+            if data_target == 0x00:
+                if data_type == 0x00:
+                    self.interface.depth_pid.k_const = value
+                if data_type == 0x01:
+                    self.interface.depth_pid.i_const = value
+                if data_type == 0x02:
+                    self.interface.depth_pid.d_const = value
+            if data_target == 0x01:
+                if data_type == 0x00:
+                    self.interface.yaw_pid.k_const = value
+                if data_type == 0x01:
+                    self.interface.yaw_pid.i_const = value
+                if data_type == 0x02:
+                    self.interface.yaw_pid.d_const = value
+            if data_target == 0x00:
+                if data_type == 0x00:
+                    self.interface.pitch_pid.k_const = value
+                if data_type == 0x01:
+                    self.interface.pitch_pid.i_const = value
+                if data_type == 0x02:
+                    self.interface.pitch_pid.d_const = value
+            if data_target == 0x00:
+                if data_type == 0x00:
+                    self.interface.roll_pid.k_const = value
+                if data_type == 0x01:
+                    self.interface.roll_pid.i_const = value
+                if data_type == 0x02:
+                    self.interface.roll_pid.d_const = value
+        elif cmd == 0x41:   # reset all pid
+            self.interface.depth_pid.reset()
+            self.interface.yaw_pid.reset()
+            self.interface.pitch_pid.reset()
+            self.interface.roll_pid.reset()
+
             
     def send_sens_data(self, data):
         self.out_queue.put(struct.pack("!cBBBBfffff", bytes([0x10]), *(data.values())))

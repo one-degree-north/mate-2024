@@ -25,9 +25,10 @@ class Sensors():
         self.depth_sensor = ms5837.MS5837(model=ms5837.MODEL_30BA, bus=1)
         self.depth_sensor.init()
         self.depth_sensor.setFluidDensity(997) # Use predefined saltwater density
-        #self.bno.offsets_accelerometer = []
-        #self.bno.offsets_gyroscope = []
-        #self.bno.offsets_magnetometer = []
+        self.bno.mode = adafruit_bno055.CONFIG_MODE
+        self.bno.offsets_accelerometer = (-29, -36, -34)
+        self.bno.offsets_gyroscope = (-1, 1, 0)
+        self.bno.offsets_magnetometer = (-157, -182, 93)
         self.bno.mode = adafruit_bno055.NDOF_MODE
         self.temp_sensor = tsys01.TSYS01() # Use default I2C bus 1
         self.temp_sensor.init()
