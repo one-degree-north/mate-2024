@@ -143,17 +143,16 @@ if __name__ == "__main__":
             if (dpg.is_key_pressed(dpg.mvKey_E)):
                 movement_vector[3] = 1
                 changed=True
-        dpg.add_checkbox(label="pid", callback=pid_en_callback)
-        dpg.add_drag_float(label="speed", min_value=0, max_value=30, callback=set_speed)
-        dpg.add_drag_float(label="Grip", min_value=1000, max_value=1500, callback=set_grip)
-        dpg.add_drag_float(label="Rotation", min_value=1000, max_value=1500, callback=set_rot)
-
         if (changed):
             if (pid_enabled):
                 client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_depth, target_roll, speed)
             else:
                 client.set_manual_thrust(movement_vector, speed)
         changed = False
+        dpg.add_checkbox(label="pid", callback=pid_en_callback)
+        dpg.add_drag_float(label="speed", min_value=0, max_value=30, callback=set_speed)
+        dpg.add_drag_float(label="Grip", min_value=1000, max_value=1500, callback=set_grip)
+        dpg.add_drag_float(label="Rotation", min_value=1000, max_value=1500, callback=set_rot)
 
 
     dpg.show_viewport()

@@ -29,6 +29,7 @@ class Server:
         if self.debug:
             print(f"server set up at {self.server_address}")
         self.server_thread.start()
+        return self.server_thread
 
     # read and write data to and from surface client
     def _server_loop(self):
@@ -60,7 +61,8 @@ class Server:
         cmd = data[0]
 
         if cmd == 0x00: # test connection
-            self.interface.test_connection()
+            print("test connection")
+            # self.interface.test_connection()
         elif cmd == 0x01: # echo
             if len(data) > 0:
                 self.interface.echo(data[1:])
