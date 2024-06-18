@@ -2,7 +2,7 @@
 import threading, queue, socket, select, struct
 
 class Server:
-    def __init__(self, server_address: tuple, stop_event=None, use_stop_event=False, debug=False):
+    def __init__(self, server_address: tuple, stop_event=None, use_stop_event=False, debug=True):
         self.connected = False
         self.server_address = server_address
         self.thruster_control = None
@@ -23,6 +23,8 @@ class Server:
 
     # starts the server for surface client to communicate with
     def start_server(self):
+        if self.debug:
+            print("trying to set up server")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(self.server_address)
         self.self_addr = self.server_address
@@ -69,30 +71,36 @@ class Server:
         elif cmd == 0x10:   # first connection (just to get addr)
             print("client connected!")
         elif cmd == 0x20:   # set manual thrust
-            if len(data) == 25:
+            if len(data) == 29:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
                 speed = struct.unpack("!f", data[25:29])
-                self.thruster_control.set_manual_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed)
+                print(f"set manual: trans: {trans}, rot: {rot}, speed: {speed}")
+                self.interface.set_manual_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed[0])
         elif cmd == 0x21:   # set pid thrust
-            if len(data) == 25:
+            if len(data) == 29:
                 trans = struct.unpack("!fff", data[1:13])
                 rot = struct.unpack("!fff", data[13:25])
                 speed = struct.unpack("!f", data[25:29])
-                self.thruster_control.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed)
+                print(f"set pid: trans: {trans}, depth: {trans[2]}, yaw: {rot[0]} pitch: {rot[1]} roll: {rot[2]}")
+                self.interface.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed[0])
         elif cmd == 0x22:   # set manual pos
             pass
         elif cmd == 0x30:   # claw grip
-            if len(data) == 4:
+            if len(data) == 5:
                 micro = struct.unpack("!I", data[1:5])
+                if self.debug:
+                    print(f"setting grip: {micro}")
                 self.interface.set_grip(micro)
         elif cmd == 0x31:   # claw rot
-            if len(data) == 4:
+            if len(data) == 5:
                 micro = struct.unpack("!I", data[1:5])
+                if self.debug:
+                    print(f"setting rot: {micro}")
                 self.interface.set_rot(micro)
             
-    def send_sens_data(self, param, values):
-        self.out_queue.put(struct.pack("!" + "c"*(3+len(values)), 0x33, param, len(values), *values))
+    def send_sens_data(self, data):
+        self.out_queue.put(struct.pack("!cBBBBfffff"), bytes([0x10]), *(data.values()))
 
 if __name__ == "__main__":
     pass

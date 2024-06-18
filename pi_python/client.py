@@ -34,7 +34,10 @@ class PIClient:
                 
                 for sock in x:  #exception 8^(. Create new socket and try to connect again.
                     print("exception in networking")
-      
+    
+    def process_data(self, data):
+        sensor_data = struct.unpack("!cBBBBfffff", data)
+        print(f"sensor_data: {sensor_data}")
     def move_servo(self, pulse1, pulse2):
         self.out_queue.put(struct.pack("!cHH", bytes([0x20]), int(pulse1//2), int(pulse2//2)))
 
@@ -55,6 +58,7 @@ class PIClient:
 
 if __name__ == "__main__":
     client = PIClient()
+    debug = True
     pid_enabled = False
     changed = False
     movement_vector = [0, 0, 0, 0, 0, 0]
@@ -82,73 +86,74 @@ if __name__ == "__main__":
         speed = app_data
 
     dpg.create_context()
+
+    def handle_keyboard_press(sender, app_data):
+        global movement_vector
+        global target_roll
+        global target_pitch
+        global target_yaw
+        global pid_enabled
+        global client
+        global speed
+        global debug
+        if debug:
+            print(f"key: {app_data}")
+        match(app_data):
+            case dpg.mvKey_W:
+                movement_vector[0] = 1
+            case dpg.mvKey_S:
+                movement_vector[0] = -1
+            case dpg.mvKey_D:
+                movement_vector[1] = 1
+            case dpg.mvKey_A:
+                movement_vector[1] = -1
+            case dpg.mvKey_Shift:
+                movement_vector[2] = 1
+            case dpg.mvKey_Spacebar:
+                movement_vector[2] = -1
+        if pid_enabled:
+            match(app_data):
+                case dpg.mvKey_J:
+                    target_roll -= 5
+                case dpg.mvKey_L:
+                    target_roll += 5
+                case dpg.mvKey_I:
+                    target_pitch += 5
+                case dpg.mvKey_K:
+                    target_pitch += -5
+                case dpg.mvKey_Q:
+                    target_yaw += -5
+                case dpg.mvKey_E:
+                    target_yaw += 5
+        else:
+            match(app_data):
+                case dpg.mvKey_J:
+                    movement_vector[5] = -1
+                case dpg.mvKey_L:
+                    movement_vector[5] = 1
+                case dpg.mvKey_I:
+                    movement_vector[4] = 1
+                case dpg.mvKey_K:
+                    movement_vector[4] = -1
+                case dpg.mvKey_Q:
+                    movement_vector[3] = -1
+                case dpg.mvKey_E:
+                    movement_vector[3] = 1
+        if pid_enabled:
+            client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
+        else:
+            client.set_manual_thrust(movement_vector, speed)
+
+    with dpg.handler_registry():
+        dpg.add_key_press_handler(callback=handle_keyboard_press)
+
     dpg.create_viewport()
     dpg.setup_dearpygui()
 
+
+
     # open new window context
     with dpg.window(label="python :3"):
-        if (dpg.is_key_pressed(dpg.mvKey_W)):
-            movement_vector[0] = 1
-            changed=True
-        if (dpg.is_key_pressed(dpg.mvKey_S)):
-            movement_vector[0] = -1
-            changed=True
-        if (dpg.is_key_pressed(dpg.mvKey_D)):
-            movement_vector[1] = 1
-            changed=True
-        if (dpg.is_key_pressed(dpg.mvKey_A)):
-            movement_vector[1] = -1
-            changed=True
-        if (dpg.is_key_pressed(dpg.mvKey_Shift)):
-            movement_vector[2] = 1
-            changed=True
-        if (dpg.is_key_pressed(dpg.mvKey_Spacebar)):
-            movement_vector[2] = -1
-            changed=True
-        if (pid_enabled):
-            if (dpg.is_key_pressed(dpg.mvKey_J)):
-                target_roll -= 5
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_L)):
-                target_roll += 5
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_I)):
-                target_pitch += 5
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_K)):
-                target_pitch += -5
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_Q)):
-                target_yaw += -5
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_E)):
-                target_yaw += 5
-                changed=True
-        else:
-            if (dpg.is_key_pressed(dpg.mvKey_J)):
-                movement_vector[5] = -1
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_L)):
-                movement_vector[5] = 1
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_I)):
-                movement_vector[4] = 1
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_K)):
-                movement_vector[4] = -1
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_Q)):
-                movement_vector[3] = -1
-                changed=True
-            if (dpg.is_key_pressed(dpg.mvKey_E)):
-                movement_vector[3] = 1
-                changed=True
-        if (changed):
-            if (pid_enabled):
-                client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_depth, target_roll, speed)
-            else:
-                client.set_manual_thrust(movement_vector, speed)
-        changed = False
         dpg.add_checkbox(label="pid", callback=pid_en_callback)
         dpg.add_drag_float(label="speed", min_value=0, max_value=30, callback=set_speed)
         dpg.add_drag_float(label="Grip", min_value=1000, max_value=1500, callback=set_grip)

@@ -62,7 +62,7 @@ class PID():
         return final_val
 
 class Controls():
-    def __init__(self, sensors=None):
+    def __init__(self, sensors=None, debug=False, server=None):
         #     enum Thruster {
     #     FRONT_RIGHT = 3,
     #     FRONT_LEFT = 4,
@@ -90,6 +90,8 @@ class Controls():
         self.pig = pigpio.pi()
         self.claw_rot_pin = 12
         self.claw_grip_pin = 13
+        self.debug = debug
+        self.server = server
 
     def thrust_to_clock(self, t):
         c = int(0xFFFF * (0.025 * t + 0.075))
@@ -101,7 +103,7 @@ class Controls():
 
     def start_loop(self):
         thread = threading.Thread(target=self.update_loop)
-        thread.run()
+        thread.start()
 
     def update_loop(self):
         while True:
@@ -111,6 +113,8 @@ class Controls():
             time.sleep(self.delay)
 
     def update_thrusters(self):
+        self.sensors.read_sensors()
+        
         if (self.pid_enabled):
             self.movements["up"] = self.depth_pid.update(self.sensors.data["depth"])
             self.movements["yaw"] = self.yaw_pid.update(self.sensors.data["yaw"])
@@ -135,12 +139,15 @@ class Controls():
             self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value-1] = -self.speed * (self.movements["up"] + self.movements["roll"] + self.movements["pitch"]) / 30.0
             self.thrust_values[self.thrusters.MID_BACK_LEFT.value-1] = -self.speed * (self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
             self.thrust_values[self.thrusters.MID_BACK_RIGHT.value-1] = -self.speed * (self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
+        if self.debug:
+            print(f"{self.thrust_values}, {self.movements}, {self.speed}")
         for i in range(8):
-            self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i]/30)
+            #print(self.thrust_values[i]/30 * 2000)
+            self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i])
 
     def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
-        self.movements["front"] = front
+        self.movements["forward"] = front
         self.movements["side"] = side
         self.movements["up"] = up
         self.movements["yaw"] = yaw
@@ -150,7 +157,7 @@ class Controls():
         self.loop_lock.release()
     def set_pid_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
-        self.movements["front"] = front
+        self.movements["forward"] = front
         self.movements["side"] = side
         self.depth_pid.set_target(up)
         self.yaw_pid.set_target(yaw)
@@ -160,10 +167,10 @@ class Controls():
         self.loop_lock.release()
 
     def set_grip(self, micro):
-        self.pig.set_servo_pulsewidth(self.claw_grip_pin, micro)
+        self.pig.set_servo_pulsewidth(self.claw_grip_pin, micro[0])
 
     def set_rot(self, micro):
-        self.pig.set_servo_pulsewidth(self.claw_rot_pin, micro)
+        self.pig.set_servo_pulsewidth(self.claw_rot_pin, micro[0])
 
 if __name__ == "__main__":
     pass
