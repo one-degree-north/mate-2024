@@ -1,9 +1,11 @@
-import imgui
+import dearpygui.dearpygui as dpg
 import socket, select, queue, threading, struct
 from collections import namedtuple
 from dataclasses import dataclass
 
 import sys
+
+
 
 class PIClient:
     #code to communicate to opi
@@ -56,16 +58,16 @@ if __name__ == "__main__":
     client = PIClient()
     pid_enabled = False
     changed = False
-    # initilize imgui context (see documentation)
-    imgui.create_context()
-    imgui.get_io().display_size = 100, 100
-    imgui.get_io().fonts.get_tex_data_as_rgba32()
+    # initilize dpg context (see documentation)
+    dpg.create_context()
+    dpg.create_viewport()
+    dpg.setup_dearpygui()
 
     # start new frame context
-    imgui.new_frame()
+    dpg.new_frame()
 
     # open new window context
-    imgui.begin("python :3", True)
+    dpg.window("python :3")
     
     movement_vector = [0, 0, 0, 0, 0, 0]
     target_yaw = 0
@@ -75,67 +77,67 @@ if __name__ == "__main__":
     speed = 0
     claw_rot = 1500
     claw_grip = 1500
-    imgui.core.is_key_pressed
-    if (imgui.is_key_pressed(imgui.KEY_W)):
+    # dpg.core.is_key_pressed
+    if (dpg.is_key_pressed(dpg.mvKey_W, False)):
         movement_vector[0] = 1
         changed=True
-    if (imgui.is_key_pressed(imgui.KEY_S)):
+    if (dpg.is_key_pressed(dpg.mvKey_S, False)):
         movement_vector[0] = -1
         changed=True
-    if (imgui.is_key_pressed(imgui.KEY_D)):
+    if (dpg.is_key_pressed(dpg.mvkey_D, False)):
         movement_vector[1] = 1
         changed=True
-    if (imgui.is_key_pressed(imgui.KEY_A)):
+    if (dpg.is_key_pressed(dpg.mvKey_A, False)):
         movement_vector[1] = -1
         changed=True
-    if (imgui.is_key_pressed(imgui.KEY_SHIFT)):
+    if (dpg.is_key_pressed(dpg.mvKey_Shift, False)):
         movement_vector[2] = 1
         changed=True
-    if (imgui.is_key_pressed(imgui.KEY_SPACE)):
+    if (dpg.is_key_pressed(dpg.mvKey_Spacebar, False)):
         movement_vector[2] = -1
         changed=True
     if (pid_enabled):
-        if (imgui.is_key_pressed(imgui.KEY_J)):
+        if (dpg.is_key_pressed(dpg.mvKey_J, False)):
             target_roll -= 5
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_L)):
+        if (dpg.is_key_pressed(dpg.mvKey_L, False)):
             target_roll += 5
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_I)):
+        if (dpg.is_key_pressed(dpg.mvKey_I, False)):
             target_pitch += 5
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_K)):
+        if (dpg.is_key_pressed(dpg.mvKey_K, False)):
             target_pitch += -5
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_Q)):
+        if (dpg.is_key_pressed(dpg.mvKey_Q, False)):
             target_yaw += -5
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_E)):
+        if (dpg.is_key_pressed(dpg.mvKey_E, False)):
             target_yaw += 5
             changed=True
     else:
-        if (imgui.is_key_pressed(imgui.KEY_J)):
+        if (dpg.is_key_pressed(dpg.mvKey_J, False)):
             movement_vector[5] = -1
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_L)):
+        if (dpg.is_key_pressed(dpg.mvKey_L, False)):
             movement_vector[5] = 1
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_I)):
+        if (dpg.is_key_pressed(dpg.mvKey_I, False)):
             movement_vector[4] = 1
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_K)):
+        if (dpg.is_key_pressed(dpg.mvKey_K, False)):
             movement_vector[4] = -1
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_Q)):
+        if (dpg.is_key_pressed(dpg.mvKey_Q, False)):
             movement_vector[3] = -1
             changed=True
-        if (imgui.is_key_pressed(imgui.KEY_E)):
+        if (dpg.is_key_pressed(dpg.mvKey_E, False)):
             movement_vector[3] = 1
             changed=True
-    _, pid_enabled = imgui.checkbox("pid", pid_enabled)
-    changed_s, speed = imgui.drag_float("speed", min_value=0, max_value=30, value=speed)
-    changed_r, claw_rot = imgui.drag_float("speed", min_value=1000, max_value=1500, value=claw_rot)
-    changed_g, claw_grip = imgui.drag_float("speed", min_value=1000, max_value=1500, value=claw_grip)
+    _, pid_enabled = dpg.add_checkbox(label="pid", user_data=pid_enabled)
+    changed_s, speed = dpg.add_drag_float(label="speed", min_value=0, max_value=30, value=speed)
+    changed_r, claw_rot = dpg.add_drag_float(label="speed", min_value=1000, max_value=1500, value=claw_rot)
+    changed_g, claw_grip = dpg.add_drag_float(label="speed", min_value=1000, max_value=1500, value=claw_grip)
     if (changed_r):
         client.set_rot(int(claw_rot))
     if (changed_g):
@@ -150,10 +152,6 @@ if __name__ == "__main__":
     changed = False
 
 
-    # close current window context
-    imgui.end()
-
-    # pass all drawing comands to the rendering pipeline
-    # and close frame context
-    imgui.render()
-    imgui.end_frame()
+    dpg.show_viewport()
+    dpg.start_dearpygui()
+    dpg.destroy_context()

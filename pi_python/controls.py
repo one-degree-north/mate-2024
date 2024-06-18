@@ -136,7 +136,7 @@ class Controls():
             self.thrust_values[self.thrusters.MID_BACK_LEFT.value-1] = -self.speed * (self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
             self.thrust_values[self.thrusters.MID_BACK_RIGHT.value-1] = -self.speed * (self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
         for i in range(8):
-            self.pca.channels[self.thrusters[i]].duty_cycle = self.thrust_to_clock(self.thrust_values.items[i]/30)
+            self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i]/30)
 
     def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
