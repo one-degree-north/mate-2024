@@ -4,6 +4,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 import cv2
 import sys
+import numpy as np
 
 data_length = 1000
 past_data_yaw = [0] * data_length
@@ -65,7 +66,9 @@ class PIClient:
                     print("exception in networking")
     
     def process_data(self, data):
-        cmd = struct.unpack("!c", data[0])[0]
+        # cmd = struct.unpack("!c", data[0])[0]
+        # cmd = struct.unpack("!c", data)
+        cmd = data[0]
         if cmd == 0x10: # sensor data!
             sensor_data = struct.unpack("!cBBBBfffff", data)
             print(f"sensor_data: {sensor_data}")
@@ -178,16 +181,16 @@ if __name__ == "__main__":
     target_pitch = 0
     speed = 0
     min_speed = 0
-    max_speed = 25
+    max_speed = 30
     claw_rot = 1500
     claw_grip = 1500
     data_length = 1000
     past_data_yaw = [0] * data_length
     key_down = [False]*1000  # I have no idea what the max dpg.mvkey is so whatever
-    max_claw_rot = 2000
-    min_claw_rot = 1000
+    max_claw_rot = 2500
+    min_claw_rot = 500
     max_claw_grip = 2000
-    min_claw_grip = 1000
+    min_claw_grip = 1250
     def pid_en_callback(sender, app_data):
         global pid_enabled
         pid_enabled= app_data
@@ -252,6 +255,10 @@ if __name__ == "__main__":
                     speed -= 1
                 case dpg.mvKey_Quote:
                     speed += 1
+                case dpg.mvKey_Z:
+                    claw_grip = min_claw_grip
+                case dpg.mvKey_X:
+                    claw_grip = max_claw_grip
             if pid_enabled:
                 match(app_data):
                     case dpg.mvKey_J:
@@ -269,14 +276,14 @@ if __name__ == "__main__":
                         # target_yaw += 5
                         target_yaw = 1
                     case dpg.mvKey_Shift:
-                        # target_depth -= 0.1
-                        target_depth = -1
+                        target_depth -= 0.01
+                        #target_depth = -1
                     case dpg.mvKey_Spacebar:
-                        # target_depth += 0.1
-                        target_depth = 1
+                        target_depth += 0.01
+                        #target_depth = 1
                 target_roll = ((target_roll + 180) % 360) - 180
                 target_pitch = ((target_pitch + 180) % 360) - 180
-                target_yaw = ((target_yaw) % 360)
+                # target_yaw = ((target_yaw) % 360)
             else:
                 match(app_data):
                     case dpg.mvKey_J:
@@ -315,7 +322,7 @@ if __name__ == "__main__":
                 client.set_manual_thrust(movement_vector, speed)
             dpg.set_value("target_pitch", f"target pitch: {target_pitch}")
             # dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
-            # dpg.set_value("target_depth", f"target depth: {target_depth}")
+            dpg.set_value("target_depth", f"target depth: {target_depth}, current depth: {client.data['depth']}")
             dpg.set_value("target_roll", f"target roll: {target_roll}")
             dpg.set_value("claw_grip", f"claw grip: {claw_grip}")
             dpg.set_value("claw_rot", f"claw rot: {claw_rot}")
@@ -333,8 +340,8 @@ if __name__ == "__main__":
         global debug
         global key_down
         key_down[app_data] = False
-        if debug:
-            print(f"key: {app_data}")
+        # if debug:
+        #     print(f"key: {app_data}")
         match(app_data):
             case dpg.mvKey_W:
                 movement_vector[0] = 0
@@ -372,10 +379,10 @@ if __name__ == "__main__":
                     target_yaw = 0
                 case dpg.mvKey_E:
                     target_yaw = 0
-                case dpg.mvKey_Shift:
-                    target_depth = 0
-                case dpg.mvKey_Spacebar:
-                    target_depth = 0
+                # case dpg.mvKey_Shift:
+                #     target_depth = 0
+                # case dpg.mvKey_Spacebar:
+                #     target_depth = 0
 
         if pid_enabled:
             client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
@@ -445,6 +452,9 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
             dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y3_axis")
             dpg.add_line_series(x_axis, past_data_depth, parent="y3_axis", tag="depth_tag")
+
+    # with dpg.texture_registry(show=True):
+    #     dpg.add_raw_texture()
 
     dpg.show_viewport()
     dpg.start_dearpygui()
