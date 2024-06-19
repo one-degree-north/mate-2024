@@ -16,6 +16,9 @@ class PID():
         self.k_const = k_const
         self.i_const = i_const
         self.d_const = d_const
+        self.last_error = 0
+        self.error = 0
+        self.current_value = 0
 
     def start_pid(self):
         self.prev_time = time.process_time_ns()
@@ -28,6 +31,7 @@ class PID():
         self.integral = 0
 
     def update(self, current_value):
+        self.current_value = current_value
         error = 0
         if (self.eul):
             rel_curr = current_value - self.target
@@ -39,13 +43,13 @@ class PID():
                 error = (error+360)
         else:
             error = self.target - current_value
-        last_error_ = error
+        self.last_error_ = error
 
         current_time = time.process_time_ns()
         dt = current_time - self.prev_time
         self.prev_time = current_time
 
-        self.integral += error * dt
+        self.integral += error * dt / 1000000000
 
         p = self.k_const * error
 
@@ -84,13 +88,20 @@ class Controls():
         self.speed = 0
         self.movements = {"forward": 0, "side": 0, "up":0, "yaw":0, "roll":0, "pitch":0}
         self.pid_enabled = False
-        self.depth_pid = PID()
-        self.yaw_pid = PID()
-        self.roll_pid = PID()
-        self.pitch_pid = PID()
+
+        #self.depth_pid = PID(450, 38.571, 0)
+        self.depth_pid = PID(0, 0, 0, False)
+        self.yaw_pid = PID(0.81, 0.071, 0, True)
+        self.roll_pid = PID(0.4, 0.002, 0.002, True)
+        #self.pitch_pid = PID(1.35, 0.101, 0, True)
+        self.pitch_pid = PID(0, 0, 0, True)
+        #self.depth_pid = PID(0, 0, 0, False)
+        #self.yaw_pid = PID(0, 0, 0, True)
+        #self.roll_pid = PID(0, 0, 0, True)
+        #self.pitch_pid = PID(0, 0, 0, True)
         self.sensors = sensors
         self.loop_lock = threading.Lock()
-        self.delay = 0.01     # in seconds
+        self.delay = 0.015     # in seconds
         self.pig = pigpio.pi()
         self.claw_rot_pin = 12
         self.claw_grip_pin = 13
@@ -121,20 +132,29 @@ class Controls():
         self.sensors.read_sensors()
 
         if (self.pid_enabled):
-            self.movements["up"] = self.depth_pid.update(self.sensors.data["depth"])
-            self.movements["yaw"] = self.yaw_pid.update(self.sensors.data["yaw"])
+            #self.movements["up"] = self.depth_pid.update(self.sensors.data["depth"])
+            #self.movements["yaw"] = self.yaw_pid.update(self.sensors.data["yaw"])
+            self.movements["up"] = self.depth_pid.target
+            self.movements["yaw"] = self.yaw_pid.target
+            #self.movements["up"] = self.movements["forward"]
+            #self.movements["yaw"] = self.movements["yaw"]
             self.movements["roll"] = self.roll_pid.update(self.sensors.data["roll"])
             self.movements["pitch"] = self.pitch_pid.update(self.sensors.data["pitch"])
 
             self.thrust_values[self.thrusters.FRONT_LEFT.value-1] = (self.speed * (self.movements["forward"] + self.movements["side"]) + self.movements["yaw"]) / 30.0
             self.thrust_values[self.thrusters.FRONT_RIGHT.value-1] = (self.speed * (self.movements["forward"] - self.movements["side"]) - self.movements["yaw"]) / 30.0
             self.thrust_values[self.thrusters.REAR_LEFT.value-1] = -(self.speed * (self.movements["forward"] - self.movements["side"]) + self.movements["yaw"]) / 30.0
-            self.thrust_values[self.thrusters.REAR_RIGHT.value-1] = -(self.speed * (self.movements["forward"] + self.movements["side"]) - self.movements["yaw"]) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value-1] = -(self.movements["up"] - self.movements["roll"] + self.movements["pitch"]) / 30.0
-            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value-1] = -(self.movements["up"] + self.movements["roll"] + self.movements["pitch"]) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_LEFT.value-1] = -(self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
-            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value-1] = -(self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
-
+            self.thrust_values[self.thrusters.REAR_RIGHT.value-1] = -(self.speed * (self.movements["forward"] + self.movements["side"] - self.movements["yaw"])) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_LEFT.value-1] = -((self.movements["up"]*self.speed) - self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value-1] = -((self.movements["up"]*self.speed) + self.movements["roll"] + self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_LEFT.value-1] = -((self.movements["up"]*self.speed) - self.movements["roll"] - self.movements["pitch"]) / 30.0
+            self.thrust_values[self.thrusters.MID_BACK_RIGHT.value-1] = -((self.movements["up"]*self.speed) + self.movements["roll"] - self.movements["pitch"]) / 30.0
+            if self.debug:
+                print(f"Depth tar: {self.depth_pid.target}, Depth curr: {self.depth_pid.current_value}, I: {self.depth_pid.integral}")
+                print(f"Pitch tar: {self.pitch_pid.target}, pitch curr: {self.pitch_pid.current_value}, I: {self.pitch_pid.integral}")
+                print(f"Roll tar: {self.roll_pid.target}, Depth curr: {self.roll_pid.current_value}, I: {self.roll_pid.integral}")
+                print(f"Yaw tar: {self.yaw_pid.target}, Depth curr: {self.yaw_pid.current_value}, I: {self.yaw_pid.integral}")
+        
         else:
             self.thrust_values[self.thrusters.FRONT_LEFT.value-1] = self.speed * (self.movements["forward"] + self.movements["side"] + self.movements["yaw"]) / 30.0
             self.thrust_values[self.thrusters.FRONT_RIGHT.value-1] = self.speed * (self.movements["forward"] - self.movements["side"] - self.movements["yaw"]) / 30.0
@@ -144,17 +164,17 @@ class Controls():
             self.thrust_values[self.thrusters.MID_FRONT_RIGHT.value-1] = -self.speed * (self.movements["up"] + self.movements["roll"] + self.movements["pitch"]) / 30.0
             self.thrust_values[self.thrusters.MID_BACK_LEFT.value-1] = -self.speed * (self.movements["up"] - self.movements["roll"] - self.movements["pitch"]) / 30.0
             self.thrust_values[self.thrusters.MID_BACK_RIGHT.value-1] = -self.speed * (self.movements["up"] + self.movements["roll"] - self.movements["pitch"]) / 30.0
-        if self.debug:
-            print(f"{self.thrust_values}, {self.movements}, {self.speed}")
+        #if self.debug:
+            #print(f"{self.thrust_values}, {self.movements}, {self.speed}")
         for i in range(8):
             #print(self.thrust_values[i]/30 * 2000)
             self.pca.channels[i].duty_cycle = self.thrust_to_clock(self.thrust_values[i])
         if self.send_data:
-            if self.debug:
-                print(f"trying to send sens")
+            #if self.debug:
+            #    print(f"trying to send sens")
             self.server.send_sens_data(self.sensors.data)
-            if self.debug:
-                print(f"funny send sens")
+            #if self.debug:
+            #    print(f"funny send sens")
 
     def set_manual_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
@@ -165,6 +185,7 @@ class Controls():
         self.movements["pitch"] = pitch
         self.movements["roll"] = roll
         self.speed = speed
+        self.pid_enabled = False
         self.loop_lock.release()
     def set_pid_thrust(self, front, side, up, yaw, pitch, roll, speed):
         self.loop_lock.acquire()
@@ -175,6 +196,7 @@ class Controls():
         self.pitch_pid.set_target(pitch)
         self.roll_pid.set_target(roll)
         self.speed = speed
+        self.pid_enabled = True
         self.loop_lock.release()
 
     def set_grip(self, micro):

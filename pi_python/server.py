@@ -44,15 +44,15 @@ class Server:
                 if self.debug:
                     print("attempting to read network data")
                 data, address = sock.recvfrom(2048)
-                if address != self.client_add or not self.connected: #client switched address (something wrong happened)
+                if address != self.client_addr or not self.connected: #client switched address (something wrong happened)
                     self.client_addr = address
                     self.connected = True
                 self._parse_data(data)
             
             for sock in w:  #ready to write!
                 if not self.out_queue.empty() and self.connected:
-                    if self.debug:
-                        print(f"attempting to write to {self.client_addr}")
+                    #if self.debug:
+                        #print(f"attempting to write to {self.client_addr}")
                     sock.sendto(self.out_queue.get(), self.client_addr)
             
             for sock in x:  #exception 8^(. Create new socket and try to connect again.
@@ -100,12 +100,19 @@ class Server:
                     print(f"setting rot: {micro}")
                 self.interface.set_rot(micro)
         elif cmd == 0x40:   # pid change constant
-            data_target = struct.unpack("!c", data[1:2]) #0: depth, 1: yaw, 2: pitch, 3: roll
-            data_type = struct.unpack("!c", data[2:3])
-            value = struct.unpack("!f", data[3:7])
+            #if self.debug:
+                #print("changing pid constant")
+            data_target = data[1] #0: depth, 1: yaw, 2: pitch, 3: roll
+            data_type = data[2]
+            value = struct.unpack("!f", data[3:7])[0]
+            #data_target = int(data_target)
+            #data_type = int(data_type)
+            if self.debug:
+                print(f"tar: {data_target} type: {data_type}, value: {value}")
             if data_target == 0x00:
                 if data_type == 0x00:
                     self.interface.depth_pid.k_const = value
+                    print("change depth const")
                 if data_type == 0x01:
                     self.interface.depth_pid.i_const = value
                 if data_type == 0x02:
@@ -117,14 +124,14 @@ class Server:
                     self.interface.yaw_pid.i_const = value
                 if data_type == 0x02:
                     self.interface.yaw_pid.d_const = value
-            if data_target == 0x00:
+            if data_target == 0x02:
                 if data_type == 0x00:
                     self.interface.pitch_pid.k_const = value
                 if data_type == 0x01:
                     self.interface.pitch_pid.i_const = value
                 if data_type == 0x02:
                     self.interface.pitch_pid.d_const = value
-            if data_target == 0x00:
+            if data_target == 0x03:
                 if data_type == 0x00:
                     self.interface.roll_pid.k_const = value
                 if data_type == 0x01:
@@ -132,6 +139,8 @@ class Server:
                 if data_type == 0x02:
                     self.interface.roll_pid.d_const = value
         elif cmd == 0x41:   # reset all pid
+            if self.debug:
+                print("RESET PID")
             self.interface.depth_pid.reset()
             self.interface.yaw_pid.reset()
             self.interface.pitch_pid.reset()
@@ -139,7 +148,14 @@ class Server:
 
             
     def send_sens_data(self, data):
-        self.out_queue.put(struct.pack("!cBBBBfffff", bytes([0x10]), *(data.values())))
+        #if self.debug:
+            #print(f"data to pack: {data}")
+        use = True
+        for v in data.values():
+            if v == None:
+                use = False
+        if use:
+            self.out_queue.put(struct.pack("!cBBBBfffff", bytes([0x10]), *(data.values())))
 
 if __name__ == "__main__":
     pass
