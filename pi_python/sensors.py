@@ -8,7 +8,7 @@ import time
 import copy
 
 class Sensors():
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         self.read_delay = 0.01
         self.i2c = I2C(1)
         self.bno = adafruit_bno055.BNO055_I2C(self.i2c)

@@ -70,7 +70,7 @@ class PID():
         return final_val
 
 class Controls():
-    def __init__(self, sensors=None, debug=True, server=None, send_data=True):
+    def __init__(self, sensors=None, debug=False, server=None, send_data=True):
         #     enum Thruster {
     #     FRONT_RIGHT = 3,
     #     FRONT_LEFT = 4,

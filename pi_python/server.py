@@ -145,6 +145,14 @@ class Server:
             self.interface.yaw_pid.reset()
             self.interface.pitch_pid.reset()
             self.interface.roll_pid.reset()
+        elif cmd == 0x50:   # enable sensor feedback
+            pass
+        elif cmd == 0x51:    # disable sensor feedback
+            pass
+        elif cmd == 0x60:   # enable thruster feedback
+            pass
+        elif cmd == 0x61:   # disable thruster feedback
+            pass
 
             
     def send_sens_data(self, data):

@@ -65,26 +65,30 @@ class PIClient:
                     print("exception in networking")
     
     def process_data(self, data):
-        sensor_data = struct.unpack("!cBBBBfffff", data)
-        print(f"sensor_data: {sensor_data}")
-        item_index = 1
-        for x, y in self.data.items():
-            self.data[x] = sensor_data[item_index]
-            item_index += 1
-        for i in range(self.data_length-1):
-            i1 = self.data_length - i - 1
-            past_data_roll[i1] = past_data_roll[i1-1]
-            past_data_pitch[i1] = past_data_pitch[i1-1]
-            past_data_yaw[i1] = past_data_yaw[i1-1]
-            past_data_depth[i1] = past_data_depth[i1-1]
-        past_data_roll[0] = self.data["roll"]
-        past_data_pitch[0] = self.data["pitch"]
-        past_data_yaw[0] = self.data["yaw"]
-        past_data_depth[0] = self.data["depth"]
-        dpg.set_value("yaw_tag", [x_axis, past_data_yaw])
-        dpg.set_value("roll_tag", [x_axis, past_data_roll])
-        dpg.set_value("pitch_tag", [x_axis, past_data_pitch])
-        dpg.set_value("depth_tag", [x_axis, past_data_depth])
+        cmd = struct.unpack("!c", data[0])[0]
+        if cmd == 0x10: # sensor data!
+            sensor_data = struct.unpack("!cBBBBfffff", data)
+            print(f"sensor_data: {sensor_data}")
+            item_index = 1
+            for x, y in self.data.items():
+                self.data[x] = sensor_data[item_index]
+                item_index += 1
+            for i in range(self.data_length-1):
+                i1 = self.data_length - i - 1
+                past_data_roll[i1] = past_data_roll[i1-1]
+                past_data_pitch[i1] = past_data_pitch[i1-1]
+                past_data_yaw[i1] = past_data_yaw[i1-1]
+                past_data_depth[i1] = past_data_depth[i1-1]
+            past_data_roll[0] = self.data["roll"]
+            past_data_pitch[0] = self.data["pitch"]
+            past_data_yaw[0] = self.data["yaw"]
+            past_data_depth[0] = self.data["depth"]
+            dpg.set_value("yaw_tag", [x_axis, past_data_yaw])
+            dpg.set_value("roll_tag", [x_axis, past_data_roll])
+            dpg.set_value("pitch_tag", [x_axis, past_data_pitch])
+            dpg.set_value("depth_tag", [x_axis, past_data_depth])
+        if cmd == 0x20: # current thruster data!
+            pass
         
 
     def move_servo(self, pulse1, pulse2):
@@ -149,6 +153,18 @@ class PIClient:
     
     def reset_all_pid(self):
         self.out_queue.put(struct.pack("!c", bytes([0x41])))
+    
+    def enable_sensor_feedback(self):
+        self.out_queue.put(struct.pack("!c", bytes([0x50])))
+
+    def disable_sensor_feedback(self):
+        self.out_queue.put(struct.pack("!c", bytes([0x51])))
+
+    def enable_thruster_feedback(self):
+        self.out_queue.put(struct.pack("!c", bytes([0x60])))
+
+    def disable_thruster_feedback(self):
+        self.out_queue.put(struct.pack("!c", bytes([0x61])))
 
 if __name__ == "__main__":
     client = PIClient()
@@ -161,10 +177,17 @@ if __name__ == "__main__":
     target_depth = 0
     target_pitch = 0
     speed = 0
+    min_speed = 0
+    max_speed = 25
     claw_rot = 1500
     claw_grip = 1500
     data_length = 1000
     past_data_yaw = [0] * data_length
+    key_down = [False]*1000  # I have no idea what the max dpg.mvkey is so whatever
+    max_claw_rot = 2000
+    min_claw_rot = 1000
+    max_claw_grip = 2000
+    min_claw_grip = 1000
     def pid_en_callback(sender, app_data):
         global pid_enabled
         pid_enabled= app_data
@@ -200,70 +223,103 @@ if __name__ == "__main__":
         global client
         global speed
         global debug
-        if debug:
-            print(f"key: {app_data}")
-        match(app_data):
-            case dpg.mvKey_W:
-                movement_vector[0] = 1
-            case dpg.mvKey_S:
-                movement_vector[0] = -1
-            case dpg.mvKey_D:
-                movement_vector[1] = 1
-            case dpg.mvKey_A:
-                movement_vector[1] = -1
-        if pid_enabled:
+        global key_down
+        global claw_rot
+        global claw_grip
+        changed = False
+        if key_down[app_data] == False:
+            changed = True
+            key_down[app_data] = True
+        if changed:
             match(app_data):
-                case dpg.mvKey_J:
-                    target_roll -= 5
-                case dpg.mvKey_L:
-                    target_roll += 5
-                case dpg.mvKey_I:
-                    target_pitch += 5
-                case dpg.mvKey_K:
-                    target_pitch += -5
-                case dpg.mvKey_Q:
-                    # target_yaw += -5
-                    target_yaw = -1
-                case dpg.mvKey_E:
-                    # target_yaw += 5
-                    target_yaw = 1
-                case dpg.mvKey_Shift:
-                    # target_depth -= 0.1
-                    target_depth = -1
-                case dpg.mvKey_Spacebar:
-                    # target_depth += 0.1
-                    target_depth = 1
-            target_roll = ((target_roll + 180) % 360) - 180
-            target_pitch = ((target_pitch + 180) % 360) - 180
-            # target_yaw = ((target_yaw) % 360)
-        else:
-            match(app_data):
-                case dpg.mvKey_J:
-                    movement_vector[5] = -1
-                case dpg.mvKey_L:
-                    movement_vector[5] = 1
-                case dpg.mvKey_I:
-                    movement_vector[4] = 1
-                case dpg.mvKey_K:
-                    movement_vector[4] = -1
-                case dpg.mvKey_Q:
-                    movement_vector[3] = -1
-                case dpg.mvKey_E:
-                    movement_vector[3] = 1
-                case dpg.mvKey_Shift:
-                    movement_vector[2] = -1
-                case dpg.mvKey_Spacebar:
-                    movement_vector[2] = 1
-        dpg.set_value("target_pitch", f"target pitch: {target_pitch}")
-        dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
-        dpg.set_value("target_depth", f"target depth: {target_depth}")
-        dpg.set_value("target_roll", f"target roll: {target_roll}")
-
-
-        if pid_enabled:
-            client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
-        else:
-            client.set_manual_thrust(movement_vector, speed)
+                case dpg.mvKey_W:
+                    movement_vector[0] = 1
+                case dpg.mvKey_S:
+                    movement_vector[0] = -1
+                case dpg.mvKey_D:
+                    movement_vector[1] = 1
+                case dpg.mvKey_A:
+                    movement_vector[1] = -1
+                case dpg.mvKey_C:
+                    claw_grip -= 50
+                case dpg.mvKey_V:
+                    claw_grip += 50
+                case dpg.mvKey_U:
+                    claw_rot -= 50
+                case dpg.mvKey_O:
+                    claw_rot += 50
+                case dpg.mvKey_Colon:
+                    speed -= 1
+                case dpg.mvKey_Quote:
+                    speed += 1
+            if pid_enabled:
+                match(app_data):
+                    case dpg.mvKey_J:
+                        target_roll -= 5
+                    case dpg.mvKey_L:
+                        target_roll += 5
+                    case dpg.mvKey_I:
+                        target_pitch += 5
+                    case dpg.mvKey_K:
+                        target_pitch += -5
+                    case dpg.mvKey_Q:
+                        # target_yaw += -5
+                        target_yaw = -1
+                    case dpg.mvKey_E:
+                        # target_yaw += 5
+                        target_yaw = 1
+                    case dpg.mvKey_Shift:
+                        # target_depth -= 0.1
+                        target_depth = -1
+                    case dpg.mvKey_Spacebar:
+                        # target_depth += 0.1
+                        target_depth = 1
+                target_roll = ((target_roll + 180) % 360) - 180
+                target_pitch = ((target_pitch + 180) % 360) - 180
+                target_yaw = ((target_yaw) % 360)
+            else:
+                match(app_data):
+                    case dpg.mvKey_J:
+                        movement_vector[5] = -1
+                    case dpg.mvKey_L:
+                        movement_vector[5] = 1
+                    case dpg.mvKey_I:
+                        movement_vector[4] = 1
+                    case dpg.mvKey_K:
+                        movement_vector[4] = -1
+                    case dpg.mvKey_Q:
+                        movement_vector[3] = -1
+                    case dpg.mvKey_E:
+                        movement_vector[3] = 1
+                    case dpg.mvKey_Shift:
+                        movement_vector[2] = -1
+                    case dpg.mvKey_Spacebar:
+                        movement_vector[2] = 1
+            if claw_grip > max_claw_grip:
+                claw_grip = max_claw_grip
+            if claw_grip < min_claw_grip:
+                claw_grip = min_claw_grip
+            if claw_rot > max_claw_rot:
+                claw_rot = max_claw_rot
+            if claw_rot < min_claw_rot:
+                claw_rot = min_claw_rot
+            if speed > max_speed:
+                speed = max_speed
+            if speed < min_speed:
+                speed = min_speed
+            client.set_grip(claw_grip)
+            client.set_rot(claw_rot)
+            if pid_enabled:
+                client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
+            else:
+                client.set_manual_thrust(movement_vector, speed)
+            dpg.set_value("target_pitch", f"target pitch: {target_pitch}")
+            # dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
+            # dpg.set_value("target_depth", f"target depth: {target_depth}")
+            dpg.set_value("target_roll", f"target roll: {target_roll}")
+            dpg.set_value("claw_grip", f"claw grip: {claw_grip}")
+            dpg.set_value("claw_rot", f"claw rot: {claw_rot}")
+            dpg.set_value("speed", f"speed: {speed}")
 
     def handle_keyboard_release(sender, app_data):
         global movement_vector
@@ -275,6 +331,8 @@ if __name__ == "__main__":
         global client
         global speed
         global debug
+        global key_down
+        key_down[app_data] = False
         if debug:
             print(f"key: {app_data}")
         match(app_data):
@@ -334,11 +392,13 @@ if __name__ == "__main__":
 
     # open new window context
     with dpg.window(label="python :3"):
-        dpg.add_text("test")
+        dpg.add_text(f"speed: {speed}", tag="speed")
         dpg.add_text(f"target yaw: {target_yaw}", tag="target_yaw")
         dpg.add_text(f"target roll: {target_roll}", tag="target_roll")
         dpg.add_text(f"target pitch: {target_pitch}", tag="target_pitch")
         dpg.add_text(f"target depth: {target_depth}", tag="target_depth")
+        dpg.add_text(f"claw rot: {claw_rot}", tag="claw_rot")
+        dpg.add_text(f"claw grip: {claw_grip}", tag="claw_grip")
         dpg.add_checkbox(label="pid", callback=pid_en_callback)
         dpg.add_checkbox(label="start sending sensor data (not implemented yet haha)")
         dpg.add_drag_float(label="speed", min_value=0, max_value=25, callback=set_speed)
@@ -346,7 +406,7 @@ if __name__ == "__main__":
         dpg.add_drag_float(label="Rotation", min_value=1000, max_value=2000, callback=set_rot)
         dpg.add_button(label="reset all pid", callback=reset_all_pid)
 
-    with dpg.window(label="yaw pid"):
+    with dpg.window(label="yaw pid", pos=[750, 0]):
         dpg.add_text("yaw PID")
         dpg.add_drag_float(label="p const", callback=set_pid_constant, user_data="yaw_p")
         dpg.add_drag_float(label="i const", callback=set_pid_constant, user_data="yaw_i")
@@ -356,7 +416,7 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y_axis")
             dpg.add_line_series(x_axis, past_data_yaw,parent="y_axis", tag="yaw_tag")
 
-    with dpg.window(label="pitch pid"):
+    with dpg.window(label="pitch pid", pos=[0, 500]):
         dpg.add_text("pitch PID")
         dpg.add_drag_float(label="p const", callback=set_pid_constant, user_data="pitch_p")
         dpg.add_drag_float(label="i const", callback=set_pid_constant, user_data="pitch_i")
@@ -366,7 +426,7 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y1_axis")
             dpg.add_line_series(x_axis, past_data_pitch, parent="y1_axis", tag="pitch_tag")
     
-    with dpg.window(label="roll pid"):
+    with dpg.window(label="roll pid", pos = [750, 500]):
         dpg.add_text("roll PID")
         dpg.add_drag_float(label="p const", callback=set_pid_constant, user_data="roll_p")
         dpg.add_drag_float(label="i const", callback=set_pid_constant, user_data="roll_i")
@@ -376,7 +436,7 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y2_axis")
             dpg.add_line_series(x_axis, past_data_roll, parent="y2_axis", tag="roll_tag")
     
-    with dpg.window(label="depth pid"):
+    with dpg.window(label="depth pid", pos = [400, 0]):
         dpg.add_text("depth PID")
         dpg.add_drag_float(label="p const", callback=set_pid_constant, user_data="depth_p")
         dpg.add_drag_float(label="i const", callback=set_pid_constant, user_data="depth_i")
