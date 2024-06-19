@@ -5,14 +5,22 @@ from dataclasses import dataclass
 import cv2
 import sys
 
+data_length = 1000
+past_data_yaw = [0] * data_length
+past_data_pitch = [0] * data_length
+past_data_roll = [0] * data_length
+past_data_depth = [0] * data_length
+x_axis = []
+for i in range(data_length):
+    x_axis.append(i)
+
 
 class PIClient:
     #code to communicate to opi
     move = namedtuple("move", ['f', 's', 'u', 'p', 'r', 'y'])
-    def __init__(self, server_address=("192.168.2.2", 7774)):
+    def __init__(self, server_address=("192.168.2.2", 7774), dpg=None):
+        self.server_address = server_address
         self.out_queue = queue.Queue()
-        self.client_thread = threading.Thread(target=self.client_loop, args=[server_address], daemon=True)
-        self.client_thread.start()
         self.data = {"sys_calib": 0,
                     "gyro_calib":0,
                     "accel_calib":0,
@@ -24,10 +32,17 @@ class PIClient:
                     "temp":0
                     }
         self.data_length = 1000
-        self.past_data_roll = [0] * self.data_length
-        self.past_data_pitch = [0] * self.data_length
-        self.past_data_yaw = [0] * self.data_length
-        self.past_data_depth = [0] * self.data_length
+        # self.past_data_roll = [0] * self.data_length
+        # self.past_data_pitch = [0] * self.data_length
+        # #self.past_data_yaw = [0] * self.data_length
+        # self.past_data_depth = [0] * self.data_length
+        # self.x_axis = []
+        # for i in range(self.data_length):
+        #     self.x_axis.append(i)
+        
+    def start_client_thread(self):
+        self.client_thread = threading.Thread(target=self.client_loop, args=[self.server_address], daemon=True)
+        self.client_thread.start()
     
     def client_loop(self, server_address):
         while True:
@@ -52,19 +67,25 @@ class PIClient:
     def process_data(self, data):
         sensor_data = struct.unpack("!cBBBBfffff", data)
         print(f"sensor_data: {sensor_data}")
-        item_index = 0
+        item_index = 1
         for x, y in self.data.items():
             self.data[x] = sensor_data[item_index]
             item_index += 1
         for i in range(self.data_length-1):
-            self.past_data_roll[i+1] = self.past_data_roll[i]
-            self.past_data_pitch[i+1] = self.past_data_pitch[i]
-            self.past_data_yaw[i+1] = self.past_data_yaw[i]
-            self.past_data_depth[i+1] = self.past_data_depth[i]
-        self.past_data_roll[i] = self.data["roll"]
-        self.past_data_pitch[i] = self.data["pitch"]
-        self.past_data_yaw[i] = self.data["yaw"]
-        self.past_data_depth[i] = self.data["depth"]
+            i1 = self.data_length - i - 1
+            past_data_roll[i1] = past_data_roll[i1-1]
+            past_data_pitch[i1] = past_data_pitch[i1-1]
+            past_data_yaw[i1] = past_data_yaw[i1-1]
+            past_data_depth[i1] = past_data_depth[i1-1]
+        past_data_roll[0] = self.data["roll"]
+        past_data_pitch[0] = self.data["pitch"]
+        past_data_yaw[0] = self.data["yaw"]
+        past_data_depth[0] = self.data["depth"]
+        dpg.set_value("yaw_tag", [x_axis, past_data_yaw])
+        dpg.set_value("roll_tag", [x_axis, past_data_roll])
+        dpg.set_value("pitch_tag", [x_axis, past_data_pitch])
+        dpg.set_value("depth_tag", [x_axis, past_data_depth])
+        
 
     def move_servo(self, pulse1, pulse2):
         self.out_queue.put(struct.pack("!cHH", bytes([0x20]), int(pulse1//2), int(pulse2//2)))
@@ -85,14 +106,42 @@ class PIClient:
         data_target = bytes([0x00]) #0: depth, 1: yaw, 2: pitch, 3: roll
         data_type = bytes([0x00]) #0: p, 1: i, 2: d
         if constant == "yaw_p":
-            data_target = bytes([0x02])
+            data_target = bytes([0x01])
             data_type = bytes([0x00])
         if constant == "yaw_i":
-            data_target = bytes([0x02])
+            data_target = bytes([0x01])
             data_type = bytes([0x01])
         if constant == "yaw_d":
+            data_target = bytes([0x01])
+            data_type = bytes([0x02])
+        if constant == "depth_p":
+            data_target = bytes([0x00])
+            data_type = bytes([0x00])
+        if constant == "depth_i":
+            data_target = bytes([0x00])
+            data_type = bytes([0x01])
+        if constant == "depth_d":
+            data_target = bytes([0x00])
+            data_type = bytes([0x02])
+        if constant == "pitch_p":
+            data_target = bytes([0x02])
+            data_type = bytes([0x00])
+        if constant == "pitch_i":
+            data_target = bytes([0x02])
+            data_type = bytes([0x01])
+        if constant == "pitch_d":
             data_target = bytes([0x02])
             data_type = bytes([0x02])
+        if constant == "roll_p":
+            data_target = bytes([0x03])
+            data_type = bytes([0x00])
+        if constant == "roll_i":
+            data_target = bytes([0x03])
+            data_type = bytes([0x01])
+        if constant == "roll_d":
+            data_target = bytes([0x03])
+            data_type = bytes([0x01])
+
         self.out_queue.put(struct.pack("!cccf", bytes([0x040]), data_target, data_type, value))
 
     def test_connection(self):
@@ -114,7 +163,8 @@ if __name__ == "__main__":
     speed = 0
     claw_rot = 1500
     claw_grip = 1500
-    
+    data_length = 1000
+    past_data_yaw = [0] * data_length
     def pid_en_callback(sender, app_data):
         global pid_enabled
         pid_enabled= app_data
@@ -138,12 +188,14 @@ if __name__ == "__main__":
         client.set_pid_constant(user_data, app_data)
 
     dpg.create_context()
+    client.start_client_thread()
 
     def handle_keyboard_press(sender, app_data):
         global movement_vector
         global target_roll
         global target_pitch
         global target_yaw
+        global target_depth
         global pid_enabled
         global client
         global speed
@@ -159,10 +211,6 @@ if __name__ == "__main__":
                 movement_vector[1] = 1
             case dpg.mvKey_A:
                 movement_vector[1] = -1
-            case dpg.mvKey_Shift:
-                movement_vector[2] = 1
-            case dpg.mvKey_Spacebar:
-                movement_vector[2] = -1
         if pid_enabled:
             match(app_data):
                 case dpg.mvKey_J:
@@ -174,9 +222,20 @@ if __name__ == "__main__":
                 case dpg.mvKey_K:
                     target_pitch += -5
                 case dpg.mvKey_Q:
-                    target_yaw += -5
+                    # target_yaw += -5
+                    target_yaw = -1
                 case dpg.mvKey_E:
-                    target_yaw += 5
+                    # target_yaw += 5
+                    target_yaw = 1
+                case dpg.mvKey_Shift:
+                    # target_depth -= 0.1
+                    target_depth = -1
+                case dpg.mvKey_Spacebar:
+                    # target_depth += 0.1
+                    target_depth = 1
+            target_roll = ((target_roll + 180) % 360) - 180
+            target_pitch = ((target_pitch + 180) % 360) - 180
+            # target_yaw = ((target_yaw) % 360)
         else:
             match(app_data):
                 case dpg.mvKey_J:
@@ -191,6 +250,16 @@ if __name__ == "__main__":
                     movement_vector[3] = -1
                 case dpg.mvKey_E:
                     movement_vector[3] = 1
+                case dpg.mvKey_Shift:
+                    movement_vector[2] = -1
+                case dpg.mvKey_Spacebar:
+                    movement_vector[2] = 1
+        dpg.set_value("target_pitch", f"target pitch: {target_pitch}")
+        dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
+        dpg.set_value("target_depth", f"target depth: {target_depth}")
+        dpg.set_value("target_roll", f"target roll: {target_roll}")
+
+
         if pid_enabled:
             client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
         else:
@@ -201,6 +270,7 @@ if __name__ == "__main__":
         global target_roll
         global target_pitch
         global target_yaw
+        global target_depth
         global pid_enabled
         global client
         global speed
@@ -216,10 +286,10 @@ if __name__ == "__main__":
                 movement_vector[1] = 0
             case dpg.mvKey_A:
                 movement_vector[1] = 0
-            case dpg.mvKey_Shift:
-                movement_vector[2] = 0
-            case dpg.mvKey_Spacebar:
-                movement_vector[2] = 0
+            # case dpg.mvKey_Shift:
+            #     movement_vector[2] = 0
+            # case dpg.mvKey_Spacebar:
+            #     movement_vector[2] = 0
         if not pid_enabled:
             match(app_data):
                 case dpg.mvKey_J:
@@ -234,6 +304,21 @@ if __name__ == "__main__":
                     movement_vector[3] = 0
                 case dpg.mvKey_E:
                     movement_vector[3] = 0
+                case dpg.mvKey_Shift:
+                    movement_vector[2] = 0
+                case dpg.mvKey_Spacebar:
+                    movement_vector[2] = 0
+        if pid_enabled:
+            match(app_data):
+                case dpg.mvKey_Q:
+                    target_yaw = 0
+                case dpg.mvKey_E:
+                    target_yaw = 0
+                case dpg.mvKey_Shift:
+                    target_depth = 0
+                case dpg.mvKey_Spacebar:
+                    target_depth = 0
+
         if pid_enabled:
             client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
         else:
@@ -249,16 +334,17 @@ if __name__ == "__main__":
 
     # open new window context
     with dpg.window(label="python :3"):
+        dpg.add_text("test")
+        dpg.add_text(f"target yaw: {target_yaw}", tag="target_yaw")
+        dpg.add_text(f"target roll: {target_roll}", tag="target_roll")
+        dpg.add_text(f"target pitch: {target_pitch}", tag="target_pitch")
+        dpg.add_text(f"target depth: {target_depth}", tag="target_depth")
         dpg.add_checkbox(label="pid", callback=pid_en_callback)
         dpg.add_checkbox(label="start sending sensor data (not implemented yet haha)")
-        dpg.add_drag_float(label="speed", min_value=0, max_value=30, callback=set_speed)
-        dpg.add_drag_float(label="Grip", min_value=1000, max_value=1500, callback=set_grip)
-        dpg.add_drag_float(label="Rotation", min_value=1000, max_value=1500, callback=set_rot)
+        dpg.add_drag_float(label="speed", min_value=0, max_value=25, callback=set_speed)
+        dpg.add_drag_float(label="Grip", min_value=1000, max_value=2000, callback=set_grip)
+        dpg.add_drag_float(label="Rotation", min_value=1000, max_value=2000, callback=set_rot)
         dpg.add_button(label="reset all pid", callback=reset_all_pid)
-        dpg.add_text(label=f"target yaw: {target_yaw}")
-        dpg.add_text(label=f"target roll: {target_roll}")
-        dpg.add_text(label=f"target pitch: {target_pitch}")
-        dpg.add_text(label=f"target depth: {target_depth}")
 
     with dpg.window(label="yaw pid"):
         dpg.add_text("yaw PID")
@@ -268,7 +354,7 @@ if __name__ == "__main__":
         with dpg.plot(label="yaw over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y_axis")
-            dpg.add_hline_series(client.past_data_yaw, parent="y_axis")
+            dpg.add_line_series(x_axis, past_data_yaw,parent="y_axis", tag="yaw_tag")
 
     with dpg.window(label="pitch pid"):
         dpg.add_text("pitch PID")
@@ -278,7 +364,7 @@ if __name__ == "__main__":
         with dpg.plot(label="pitch over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y1_axis")
-            dpg.add_hline_series(client.past_data_pitch, parent="y1_axis")
+            dpg.add_line_series(x_axis, past_data_pitch, parent="y1_axis", tag="pitch_tag")
     
     with dpg.window(label="roll pid"):
         dpg.add_text("roll PID")
@@ -288,7 +374,7 @@ if __name__ == "__main__":
         with dpg.plot(label="roll over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
             dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag="y2_axis")
-            dpg.add_hline_series(client.past_data_roll, parent="y2_axis")
+            dpg.add_line_series(x_axis, past_data_roll, parent="y2_axis", tag="roll_tag")
     
     with dpg.window(label="depth pid"):
         dpg.add_text("depth PID")
@@ -298,7 +384,7 @@ if __name__ == "__main__":
         with dpg.plot(label="depth over time"):
             dpg.add_plot_axis(dpg.mvXAxis, label="time")
             dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y3_axis")
-            dpg.add_hline_series(client.past_data_depth, parent="y3_axis")
+            dpg.add_line_series(x_axis, past_data_depth, parent="y3_axis", tag="depth_tag")
 
     dpg.show_viewport()
     dpg.start_dearpygui()

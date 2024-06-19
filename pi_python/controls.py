@@ -108,8 +108,13 @@ class Controls():
         self.debug = debug
         self.server = server
         self.send_data = send_data
+        self.thrust_max = 0.85
 
     def thrust_to_clock(self, t):
+        if t > self.thrust_max:
+            t = self.thrust_max
+        if t < -self.thrust_max:
+            t = -self.thrust_max
         c = int(0xFFFF * (0.025 * t + 0.075))
         if c > int(float(0xFFFF) * (0.125)):
             c = int(float(0xFFFF) * (0.125))
