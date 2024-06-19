@@ -191,6 +191,14 @@ if __name__ == "__main__":
     min_claw_rot = 500
     max_claw_grip = 2000
     min_claw_grip = 1250
+    cam1 = cv2.VideoCapture()
+    width1 = cam1.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height1 = cam1.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    cam1data = None
+    cam2 = cv2.VideoCapture()
+    width2 = cam2.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height2 = cam2.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    cam2data = None
     def pid_en_callback(sender, app_data):
         global pid_enabled
         pid_enabled= app_data
@@ -453,8 +461,19 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y3_axis")
             dpg.add_line_series(x_axis, past_data_depth, parent="y3_axis", tag="depth_tag")
 
-    # with dpg.texture_registry(show=True):
-    #     dpg.add_raw_texture()
+    with dpg.texture_registry(show=True):
+        dpg.add_raw_texture(width=width1, height=height1, default_value=cam1data, tag="cam1", format=dpg.mvFormat_Float_rgb)
+
+    
+    while dpg.is_dearpygui_running():
+        ret, frame = cam1.read()
+        data = np.flip(frame, 2)
+        data = data.ravel()
+        # dpg.add_raw_texture()
+        data = np.asfarray(data, dtype='f')
+        texture_data = np.true_divide(data, 255.0)
+        dpg.set_value("cam1", texture_data)
+        dpg.render_dearpygui_frame()
 
     dpg.show_viewport()
     dpg.start_dearpygui()
