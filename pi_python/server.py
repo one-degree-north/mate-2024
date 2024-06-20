@@ -85,8 +85,12 @@ class Server:
                 speed = struct.unpack("!f", data[25:29])
                 print(f"set pid: trans: {trans}, depth: {trans[2]}, yaw: {rot[0]} pitch: {rot[1]} roll: {rot[2]}")
                 self.interface.set_pid_thrust(trans[0], trans[1], trans[2], rot[0], rot[1], rot[2], speed[0])
-        elif cmd == 0x22:   # set manual pos
-            pass
+        elif cmd == 0x22:   # set pid thrust without yaw
+            if len(data) == 29:
+                trans = struct.unpack("!fff", data[1:13])
+                rot = struct.unpack("!fff", data[13:25])
+                speed = struct.unpack("!f", data[25:29])
+                print(f"set pid without yaw: trans: {trans}, yaw: {rot[0]}")
         elif cmd == 0x30:   # claw grip
             if len(data) == 5:
                 micro = struct.unpack("!I", data[1:5])

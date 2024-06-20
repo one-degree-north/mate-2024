@@ -109,6 +109,9 @@ class PIClient:
     def set_pid_target(self, moves, target_depth, target_yaw, target_pitch, target_roll, speed):    # moves are in target m/s
         self.out_queue.put(struct.pack("!cfffffff", bytes([0x21]), *(moves[0:2]), target_depth, target_yaw, target_pitch, target_roll, speed))
  
+    def set_pid_no_yaw(self, moves, target_depth, yaw, target_pitch, target_roll, speed):
+        self.out_queue.put(struct.pack("!cffffff", bytes([0x22]), *(moves[0:2]), target_depth, yaw, target_pitch, target_roll, speed))
+
     def set_pid_constant(self, constant, value):
         data_target = bytes([0x00]) #0: depth, 1: yaw, 2: pitch, 3: roll
         data_type = bytes([0x00]) #0: p, 1: i, 2: d
@@ -191,17 +194,26 @@ if __name__ == "__main__":
     min_claw_rot = 500
     max_claw_grip = 2000
     min_claw_grip = 1250
-    cam1 = cv2.VideoCapture()
+    yaw_pid_enabled = False
+    cam1 = cv2.VideoCapture("http://192.168.2.2:8081/?action=stream")
     width1 = cam1.get(cv2.CAP_PROP_FRAME_WIDTH)
+    print(f"width1: {width1}")
     height1 = cam1.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    cam1data = None
-    cam2 = cv2.VideoCapture()
-    width2 = cam2.get(cv2.CAP_PROP_FRAME_WIDTH)
-    height2 = cam2.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    cam2data = None
+    print(f"height1: {height1}")
+    # cam1data = None
+    # cam2 = cv2.VideoCapture()
+    # width2 = cam2.get(cv2.CAP_PROP_FRAME_WIDTH)
+    # height2 = cam2.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    # cam2data = None
     def pid_en_callback(sender, app_data):
         global pid_enabled
         pid_enabled= app_data
+        client.reset_all_pid()
+
+    def yaw_pid_en_callback(sender, app_data):
+        global yaw_pid_enabled
+        yaw_pid_enabled = app_data
+        client.reset_all_pid()
 
     def reset_all_pid(sender, app_data):
         client.reset_all_pid()
@@ -268,21 +280,27 @@ if __name__ == "__main__":
                 case dpg.mvKey_X:
                     claw_grip = max_claw_grip
             if pid_enabled:
+                if not yaw_pid_enabled:
+                    match(app_data):
+                        case dpg.mvKey_Q:
+                            movement_vector[3] = -1
+                        case dpg.mvKey_E:
+                            movement_vector[3] = 1
+                else:
+                    match(app_data):
+                        case dpg.mvKey_Q:
+                            target_yaw -= 5
+                        case dpg.mvKey_E:
+                            target_yaw += 5
                 match(app_data):
                     case dpg.mvKey_J:
-                        target_roll -= 5
-                    case dpg.mvKey_L:
                         target_roll += 5
+                    case dpg.mvKey_L:
+                        target_roll -= 5
                     case dpg.mvKey_I:
                         target_pitch += 5
                     case dpg.mvKey_K:
                         target_pitch += -5
-                    case dpg.mvKey_Q:
-                        # target_yaw += -5
-                        target_yaw = -1
-                    case dpg.mvKey_E:
-                        # target_yaw += 5
-                        target_yaw = 1
                     case dpg.mvKey_Shift:
                         target_depth -= 0.01
                         #target_depth = -1
@@ -291,13 +309,14 @@ if __name__ == "__main__":
                         #target_depth = 1
                 target_roll = ((target_roll + 180) % 360) - 180
                 target_pitch = ((target_pitch + 180) % 360) - 180
-                # target_yaw = ((target_yaw) % 360)
+                if yaw_pid_enabled:
+                    target_yaw = ((target_yaw) % 360)
             else:
                 match(app_data):
                     case dpg.mvKey_J:
-                        movement_vector[5] = -1
-                    case dpg.mvKey_L:
                         movement_vector[5] = 1
+                    case dpg.mvKey_L:
+                        movement_vector[5] = -1
                     case dpg.mvKey_I:
                         movement_vector[4] = 1
                     case dpg.mvKey_K:
@@ -325,11 +344,14 @@ if __name__ == "__main__":
             client.set_grip(claw_grip)
             client.set_rot(claw_rot)
             if pid_enabled:
-                client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
+                if yaw_pid_enabled:
+                    client.set_pid_target(movement_vector[0:2], target_depth, target_yaw, target_pitch, target_roll, speed)
+                else:
+                    client.set_pid_no_yaw(movement_vector[0:2], target_depth, movement_vector[3], target_pitch, target_roll, speed)
             else:
                 client.set_manual_thrust(movement_vector, speed)
             dpg.set_value("target_pitch", f"target pitch: {target_pitch}")
-            # dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
+            dpg.set_value("target_yaw", f"target yaw: {target_yaw}")
             dpg.set_value("target_depth", f"target depth: {target_depth}, current depth: {client.data['depth']}")
             dpg.set_value("target_roll", f"target roll: {target_roll}")
             dpg.set_value("claw_grip", f"claw grip: {claw_grip}")
@@ -381,12 +403,12 @@ if __name__ == "__main__":
                     movement_vector[2] = 0
                 case dpg.mvKey_Spacebar:
                     movement_vector[2] = 0
-        if pid_enabled:
+        if pid_enabled and not yaw_pid_enabled:
             match(app_data):
                 case dpg.mvKey_Q:
-                    target_yaw = 0
+                    movement_vector[3] = 0
                 case dpg.mvKey_E:
-                    target_yaw = 0
+                    movement_vector[3] = 0
                 # case dpg.mvKey_Shift:
                 #     target_depth = 0
                 # case dpg.mvKey_Spacebar:
@@ -415,6 +437,7 @@ if __name__ == "__main__":
         dpg.add_text(f"claw rot: {claw_rot}", tag="claw_rot")
         dpg.add_text(f"claw grip: {claw_grip}", tag="claw_grip")
         dpg.add_checkbox(label="pid", callback=pid_en_callback)
+        dpg.add_checkbox(label="yaw pid", callback=yaw_pid_en_callback)
         dpg.add_checkbox(label="start sending sensor data (not implemented yet haha)")
         dpg.add_drag_float(label="speed", min_value=0, max_value=25, callback=set_speed)
         dpg.add_drag_float(label="Grip", min_value=1000, max_value=2000, callback=set_grip)
@@ -461,10 +484,21 @@ if __name__ == "__main__":
             dpg.add_plot_axis(dpg.mvYAxis, label="meters", tag="y3_axis")
             dpg.add_line_series(x_axis, past_data_depth, parent="y3_axis", tag="depth_tag")
 
+    # dpg.show_viewport()
     with dpg.texture_registry(show=True):
-        dpg.add_raw_texture(width=width1, height=height1, default_value=cam1data, tag="cam1", format=dpg.mvFormat_Float_rgb)
+        ret, frame = cam1.read()
+        data = np.flip(frame, 2)
+        data = data.ravel()
+        # dpg.add_raw_texture()
+        data = np.asfarray(data, dtype='f')
+        texture_data = np.true_divide(data, 255.0)
+        dpg.add_raw_texture(width=width1, height=height1, tag="cam1", default_value=texture_data,format=dpg.mvFormat_Float_rgb)
 
-    
+    # with dpg.window(label="Example Window"):
+    #     dpg.add_text("Hello, world")
+    #     dpg.add_image("cam1")
+    dpg.show_metrics()
+    dpg.show_viewport()
     while dpg.is_dearpygui_running():
         ret, frame = cam1.read()
         data = np.flip(frame, 2)
@@ -475,6 +509,6 @@ if __name__ == "__main__":
         dpg.set_value("cam1", texture_data)
         dpg.render_dearpygui_frame()
 
-    dpg.show_viewport()
+    # dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
